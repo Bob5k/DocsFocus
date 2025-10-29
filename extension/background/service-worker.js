@@ -46,6 +46,7 @@ async function handleManualOverrideMessage(message, sender, sendResponse) {
 	const domain = message.payload?.domain;
 	const enabled = message.payload?.enabled;
 	const tabId = message.payload?.tabId ?? sender.tab?.id ?? null;
+	const skipPermissionCheck = Boolean(message.payload?.skipPermissionCheck);
 
 	if (!domain) {
 		sendResponse({ ok: false, error: "Missing domain for manual override." });
@@ -54,13 +55,23 @@ async function handleManualOverrideMessage(message, sender, sendResponse) {
 
 	try {
 		if (enabled === true) {
-			const granted = await ensureHostPermission(domain);
-			if (!granted) {
-				sendResponse({
-					ok: false,
-					error: "Permission denied for this domain.",
-				});
-				return;
+			const hasPermission = await hasHostPermission(domain);
+			if (!hasPermission) {
+				if (skipPermissionCheck) {
+					sendResponse({
+						ok: false,
+						error: "Permission denied for this domain.",
+					});
+					return;
+				}
+				const granted = await requestHostPermission(domain);
+				if (!granted) {
+					sendResponse({
+						ok: false,
+						error: "Permission denied for this domain.",
+					});
+					return;
+				}
 			}
 		}
 
@@ -153,14 +164,15 @@ async function requestStateFromTab(tabId) {
 	}
 }
 
-async function ensureHostPermission(domain) {
+async function hasHostPermission(domain) {
 	const origins = buildOriginPatterns(domain);
-	const hasPermission = await chrome.permissions
+	return await chrome.permissions
 		.contains({ origins })
 		.catch(() => false);
-	if (hasPermission) {
-		return true;
-	}
+}
+
+async function requestHostPermission(domain) {
+	const origins = buildOriginPatterns(domain);
 	try {
 		return await chrome.permissions.request({ origins });
 	} catch (error) {

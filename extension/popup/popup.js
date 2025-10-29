@@ -12,6 +12,8 @@ const popupState = {
 	sitePresetClear: null,
 };
 
+let statusResetTimer = null;
+
 document.addEventListener("DOMContentLoaded", initializePopup);
 
 async function initializePopup() {
@@ -64,7 +66,11 @@ async function initializePopup() {
 		popupState.contentState = await requestContentState(popupState.tabId);
 		console.log("[DocsFocus] Content state retrieved from tab");
 	} catch (error) {
-		console.warn("[DocsFocus] Failed to get content state from tab:", error);
+		console.warn(
+			"[DocsFocus] Failed to get content state from tab:",
+			formatError(error),
+			error,
+		);
 	}
 
 	if (!popupState.contentState) {
@@ -95,6 +101,7 @@ async function initializePopup() {
 				} catch (error) {
 					console.warn(
 						"[DocsFocus] Could not communicate with content script:",
+						formatError(error),
 						error,
 					);
 					// Still update local state even if content script communication fails
@@ -228,17 +235,29 @@ function renderStatus() {
 		Boolean(derivedDomain) &&
 		(!popupState.tabUrl || popupState.tabUrl.startsWith("http"));
 	const domainHasOverride = Boolean(domainSettings);
-	const presetDisplay = domainHasOverride
-		? domainPreset && domainPreset !== "custom"
-			? `Preset: ${domainPreset}`
-			: "Preset: Custom"
-		: "Preset: Global defaults";
 
 	const diagnosticLines = [];
+	const globalPresetName =
+		popupState.contentState?.globalSettings?.preset ?? "deepfocus";
+	const effectivePresetName =
+		domainHasOverride && domainPreset ? domainPreset : globalPresetName;
+	const presetLabel = formatPresetLabel(effectivePresetName);
+	const presetDisplay = domainHasOverride
+		? presetLabel === "Custom"
+			? "Preset: Custom"
+			: `Preset: ${presetLabel}`
+		: presetLabel === "Custom"
+			? "Preset: Custom (global)"
+			: `Preset: ${presetLabel} (global)`;
 
-	if (eligibilityMessage) {
-		diagnosticLines.push(eligibilityMessage);
-	}
+	const addDiagnostic = (text) => {
+		if (!text || diagnosticLines.includes(text)) {
+			return;
+		}
+		diagnosticLines.push(text);
+	};
+
+	addDiagnostic(eligibilityMessage);
 
 	if (!siteEligible) {
 		if (overrideDisabled || autoDetected) {
@@ -247,10 +266,8 @@ function renderStatus() {
 			statusText.textContent =
 				"DocsFocus is idle: page not detected as documentation.";
 		}
-		// Show preset info only if domain has overrides
-		if (domainHasOverride) {
-			diagnosticLines.push(presetDisplay);
-		}
+		// Show preset info so users see whether custom or global settings apply
+		addDiagnostic(presetDisplay);
 		if (diagnostic && diagnosticLines.length) {
 			diagnostic.hidden = false;
 			diagnostic.textContent = diagnosticLines.join(" ");
@@ -261,7 +278,7 @@ function renderStatus() {
 	if (!adhdMode) {
 		statusText.textContent = "ADHD Mode is OFF. Enable to apply focus helpers.";
 		if (diagnosticLines.length === 0 && autoDetectedInfo?.label) {
-			diagnosticLines.push(autoDetectedInfo.label);
+			addDiagnostic(autoDetectedInfo.label);
 		}
 		if (diagnostic && diagnosticLines.length) {
 			diagnostic.hidden = false;
@@ -274,16 +291,64 @@ function renderStatus() {
 		? "DocsFocus is active on this page."
 		: "DocsFocus is preparing enhancements…";
 
-	if (autoDetectedInfo?.label) {
-		diagnosticLines.push(autoDetectedInfo.label);
-	}
-
-	diagnosticLines.push(presetDisplay);
+	addDiagnostic(autoDetectedInfo?.label);
+	addDiagnostic(presetDisplay);
 
 	if (diagnostic && diagnosticLines.length) {
 		diagnostic.hidden = false;
 		diagnostic.textContent = diagnosticLines.join(" ");
 	}
+}
+
+function formatPresetLabel(name) {
+	if (!name || typeof name !== "string") {
+		return "Custom";
+	}
+	const normalized = name.toLowerCase();
+	const presetLabels = {
+		deepfocus: "Deep Focus",
+		skim: "Skim (fast scan)",
+	};
+	if (Object.hasOwn(presetLabels, normalized)) {
+		return presetLabels[normalized];
+	}
+	if (normalized === "custom") {
+		return "Custom";
+	}
+	return name;
+}
+
+function showTransientStatus(
+	message,
+	{ tone = "error", duration = 4000 } = {},
+) {
+	if (!message) {
+		return;
+	}
+	const statusText = document.getElementById("status-text");
+	if (!statusText) {
+		return;
+	}
+	if (statusResetTimer) {
+		clearTimeout(statusResetTimer);
+		statusResetTimer = null;
+	}
+
+	const colorMap = {
+		error: "#d73a49",
+		success: "#2da44e",
+		info: "",
+	};
+	const resolvedColor = colorMap[tone] ?? colorMap.info;
+
+	statusText.textContent = message;
+	statusText.style.color = resolvedColor;
+
+	statusResetTimer = setTimeout(() => {
+		statusText.style.color = "";
+		renderStatus();
+		statusResetTimer = null;
+	}, duration);
 }
 
 function updateSiteControls() {
@@ -383,7 +448,11 @@ async function resolveActiveTab() {
 			};
 		}
 	} catch (error) {
-		console.warn("[DocsFocus] Unable to resolve active tab:", error);
+		console.warn(
+			"[DocsFocus] Unable to resolve active tab:",
+			formatError(error),
+			error,
+		);
 	}
 	return { id: null, url: null };
 }
@@ -403,6 +472,7 @@ async function requestContentState(tabId) {
 	} catch (error) {
 		console.warn(
 			"[DocsFocus] Content script unreachable for state request:",
+			formatError(error),
 			error,
 		);
 		return null;
@@ -626,7 +696,9 @@ async function handleSiteButtonClick() {
 		return;
 	}
 
-	popupState.siteButton.disabled = true;
+	if (popupState.siteButton) {
+		popupState.siteButton.disabled = true;
+	}
 
 	let desired;
 	if (action === "enable") {
@@ -637,24 +709,61 @@ async function handleSiteButtonClick() {
 		desired = null;
 	}
 
+	let customStatusMessage = null;
+	let skipPermissionCheck = false;
+
 	try {
-		await applyManualOverride(domain, desired);
+		if (desired === true) {
+			const granted = await ensureDomainPermission(domain);
+			if (!granted) {
+				customStatusMessage =
+					"DocsFocus needs permission for this site. Approve the browser prompt to enable it.";
+				return;
+			}
+			skipPermissionCheck = true;
+		}
+
+		await applyManualOverride(domain, desired, {
+			skipPermissionCheck,
+		});
+
+		if (desired === true && popupState.tabId != null) {
+			await ensureContentScriptInjected(popupState.tabId);
+			const refreshed = await requestContentState(popupState.tabId);
+			if (refreshed) {
+				popupState.contentState = refreshed;
+			}
+		}
 	} catch (error) {
-		console.error("[DocsFocus] Failed to update manual override:", error);
+		console.error(
+			"[DocsFocus] Failed to update manual override:",
+			formatError(error),
+			error,
+		);
+		customStatusMessage =
+			typeof error?.message === "string"
+				? `Error: ${error.message}`
+				: "Error: Unable to update DocsFocus for this domain.";
 	} finally {
-		popupState.siteButton.disabled = false;
+		if (popupState.siteButton) {
+			popupState.siteButton.disabled = false;
+		}
 		renderStatus();
 		updateSiteControls();
+		if (customStatusMessage) {
+			showTransientStatus(customStatusMessage);
+		}
 	}
 }
 
-async function applyManualOverride(domain, desired) {
+async function applyManualOverride(domain, desired, options = {}) {
 	const payload = {
 		type: popupState.helpers.MESSAGE_TYPES.MANUAL_OVERRIDE,
 		payload: {
 			domain,
 			enabled: desired,
 			tabId: popupState.tabId,
+			skipPermissionCheck: Boolean(options.skipPermissionCheck),
 		},
 	};
 
@@ -666,12 +775,103 @@ async function applyManualOverride(domain, desired) {
 		} else {
 			popupState.contentState = await buildFallbackState(response.overrides);
 		}
-	} else {
-		// On failure attempt to refresh from content script/fallback to keep UI in sync.
-		popupState.contentState =
-			(await requestContentState(popupState.tabId)) ??
-			(await buildFallbackState());
+		return response;
 	}
+
+	// On failure attempt to refresh from content script/fallback to keep UI in sync.
+	popupState.contentState =
+		(await requestContentState(popupState.tabId)) ??
+		(await buildFallbackState());
+
+	const errorMessage =
+		typeof response?.error === "string" && response.error.trim()
+			? response.error
+			: "Manual override failed.";
+	throw new Error(errorMessage);
+}
+
+async function ensureDomainPermission(domain) {
+	if (!domain) {
+		return false;
+	}
+
+	const origins = buildOriginPatterns(domain);
+
+	try {
+		const alreadyGranted = await chrome.permissions
+			.contains({ origins })
+			.catch(() => false);
+		if (alreadyGranted) {
+			return true;
+		}
+	} catch (error) {
+		console.warn(
+			"[DocsFocus] Permission check failed:",
+			formatError(error),
+			error,
+		);
+	}
+
+	try {
+		const granted = await chrome.permissions.request({ origins });
+		return Boolean(granted);
+	} catch (error) {
+		console.warn(
+			"[DocsFocus] Permission request failed:",
+			formatError(error),
+			error,
+		);
+		return false;
+	}
+}
+
+function buildOriginPatterns(domain) {
+	return [`https://${domain}/*`, `http://${domain}/*`];
+}
+
+async function ensureContentScriptInjected(tabId) {
+	if (tabId == null || typeof tabId !== "number") {
+		return;
+	}
+
+	try {
+		await chrome.scripting.insertCSS({
+			target: { tabId },
+			files: ["content/styles.css"],
+		});
+	} catch (error) {
+		if (
+			!error?.message ||
+			!error.message.toLowerCase().includes("css has already been injected")
+		) {
+			console.warn("[DocsFocus] CSS injection failed:", formatError(error));
+		}
+	}
+
+	try {
+		await chrome.scripting.executeScript({
+			target: { tabId },
+			files: ["content/content.js"],
+		});
+	} catch (error) {
+		console.warn(
+			"[DocsFocus] Content script injection failed:",
+			formatError(error),
+		);
+	}
+}
+
+function formatError(error) {
+	if (!error) {
+		return "Unknown error";
+	}
+	if (typeof error === "string") {
+		return error;
+	}
+	if (error?.message) {
+		return error.message;
+	}
+	return String(error);
 }
 
 async function handleSitePresetApply() {
@@ -699,8 +899,12 @@ async function handleSitePresetApply() {
 
 	popupState.sitePresetApply.disabled = true;
 
+	let statusMessage = null;
+	let statusTone = "error";
+	let presetSettings = null;
+
 	try {
-		const presetSettings = popupState.helpers.applyPresetSettings
+		presetSettings = popupState.helpers.applyPresetSettings
 			? await popupState.helpers.applyPresetSettings(
 					selected,
 					popupState.helpers.DEFAULT_SETTINGS,
@@ -714,9 +918,17 @@ async function handleSitePresetApply() {
 		await popupState.helpers.setDomainSettings(domain, presetSettings);
 		console.log("[DocsFocus] Domain settings saved successfully");
 
+		let manualEnableApplied = false;
 		if (!popupState.contentState?.siteEligible) {
-			console.log("[DocsFocus] Site not eligible, applying manual override");
-			await applyManualOverride(domain, true);
+			console.log("[DocsFocus] Site not eligible, attempting manual enable");
+			const granted = await ensureDomainPermission(domain);
+			if (!granted) {
+				statusMessage =
+					"DocsFocus needs permission for this site. Approve the browser prompt to enable it.";
+				return;
+			}
+			await applyManualOverride(domain, true, { skipPermissionCheck: true });
+			manualEnableApplied = true;
 		}
 
 		if (popupState.tabId != null) {
@@ -729,9 +941,16 @@ async function handleSitePresetApply() {
 			} catch (error) {
 				console.warn(
 					"[DocsFocus] Unable to push domain settings message:",
+					formatError(error),
 					error,
 				);
+				statusMessage ??=
+					"Preset saved, but DocsFocus couldn't reach this tab. Reload the page to apply it.";
 			}
+		}
+
+		if (manualEnableApplied && popupState.tabId != null) {
+			await ensureContentScriptInjected(popupState.tabId);
 		}
 
 		const refreshed = await requestContentState(popupState.tabId);
@@ -745,13 +964,36 @@ async function handleSitePresetApply() {
 				domainPreset: presetSettings.preset ?? selected,
 			};
 			console.log("[DocsFocus] State updated locally");
+			statusMessage ??=
+				"Preset saved. Reload this page if changes do not appear immediately.";
+		}
+
+		if (!statusMessage) {
+			const prettyPreset = formatPresetLabel(
+				presetSettings?.preset ?? selected,
+			);
+			statusTone = "success";
+			statusMessage = `Preset ${prettyPreset} applied for this domain.`;
 		}
 	} catch (error) {
-		console.error("[DocsFocus] Failed to apply site preset:", error);
+		console.error(
+			"[DocsFocus] Failed to apply site preset:",
+			formatError(error),
+			error,
+		);
+		statusMessage =
+			statusMessage ??
+			`Error: Failed to apply preset. ${formatError(error)}`.trim();
 	} finally {
 		popupState.sitePresetApply.disabled = false;
 		updateSiteControls();
 		renderStatus();
+		if (statusMessage) {
+			showTransientStatus(statusMessage, {
+				tone: statusTone,
+				duration: statusTone === "success" ? 2500 : 4000,
+			});
+		}
 	}
 }
 
@@ -777,6 +1019,9 @@ async function handleSitePresetClear() {
 			popupState.contentState?.globalSettings?.preset ?? "deepfocus";
 	}
 
+	let statusMessage = null;
+	let statusTone = "success";
+
 	try {
 		await popupState.helpers.clearDomainSettings(domain);
 		console.log("[DocsFocus] Domain settings cleared successfully");
@@ -791,8 +1036,12 @@ async function handleSitePresetClear() {
 			} catch (error) {
 				console.warn(
 					"[DocsFocus] Unable to notify content script about domain clear:",
+					formatError(error),
 					error,
 				);
+				statusTone = "info";
+				statusMessage ??=
+					"Preset cleared, but this tab did not respond. Reload the page to ensure defaults apply.";
 			}
 		}
 
@@ -808,14 +1057,37 @@ async function handleSitePresetClear() {
 					popupState.contentState?.globalSettings?.preset ?? "deepfocus",
 			};
 			console.log("[DocsFocus] State updated locally");
+			statusTone = statusTone === "success" ? "info" : statusTone;
+			statusMessage ??=
+				"Preset cleared. Reload this page if it still shows custom settings.";
+		}
+
+		if (!statusMessage) {
+			const globalPreset =
+				popupState.contentState?.globalSettings?.preset ?? "deepfocus";
+			statusMessage = `Site overrides removed. Using global ${formatPresetLabel(globalPreset)} preset.`;
 		}
 	} catch (error) {
-		console.error("[DocsFocus] Failed to clear domain settings:", error);
+		console.error(
+			"[DocsFocus] Failed to clear domain settings:",
+			formatError(error),
+			error,
+		);
+		statusTone = "error";
+		statusMessage =
+			statusMessage ??
+			`Error: Failed to clear preset. ${formatError(error)}`.trim();
 	} finally {
 		if (popupState.sitePresetClear) {
 			popupState.sitePresetClear.disabled = false;
 		}
 		updateSiteControls();
 		renderStatus();
+		if (statusMessage) {
+			showTransientStatus(statusMessage, {
+				tone: statusTone,
+				duration: statusTone === "success" ? 2500 : 4000,
+			});
+		}
 	}
 }
