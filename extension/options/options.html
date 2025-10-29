@@ -12,6 +12,23 @@
         <p class="options__subtitle">Tune focus helpers to match your reading style.</p>
       </header>
       <form id="settings-form" class="options__form" autocomplete="off">
+        <section class="options__section options__section--preset" aria-labelledby="preset-label">
+          <div class="options__field">
+            <label id="preset-label" for="preset-select" class="options__label">Reading preset</label>
+            <select id="preset-select" name="preset" class="options__select">
+              <option value="balanced">Balanced (default)</option>
+              <option value="skim">Skim (fast scan)</option>
+              <option value="focus">Focus</option>
+              <option value="deep">Deep dive</option>
+              <option value="custom">Custom</option>
+            </select>
+            <p class="options__hint">Presets adjust multiple focus helpers at once. You can fine-tune values below.</p>
+          </div>
+          <div class="options__actions options__actions--inline">
+            <button type="button" class="options__button" id="preset-apply">Apply preset</button>
+          </div>
+        </section>
+
         <section class="options__section" aria-labelledby="collapse-threshold-label">
           <div class="options__field">
             <label id="collapse-threshold-label" for="collapse-threshold" class="options__label">Collapse threshold (characters)</label>
@@ -48,6 +65,36 @@
             <input type="checkbox" id="preview-tldr" name="previewTlDr" />
             <span class="switch__control" aria-hidden="true"></span>
             <span class="switch__text">Show TL;DR code preview at section top</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="reading-mask" name="readingMask" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Enable reading mask overlay</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="collapsible-sections" name="collapsibleSections" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Allow collapsing documentation sections</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="trim-chrome" name="trimChrome" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Hide noisy banners and sidebars</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="section-tracker" name="sectionTracker" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Show floating current-section tracker</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="keyboard-shortcuts" name="keyboardShortcuts" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Enable DocsFocus keyboard shortcuts</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="dyslexia-mode" name="dyslexiaMode" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Use dyslexia-friendly typography</span>
           </label>
         </section>
 

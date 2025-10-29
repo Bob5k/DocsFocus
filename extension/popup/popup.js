@@ -6,7 +6,11 @@ const popupState = {
   siteSection: null,
   siteStatusText: null,
   siteButton: null,
-  idleEnableButton: null
+  idleEnableButton: null,
+  diagnosticText: null,
+  sitePresetSelect: null,
+  sitePresetApply: null,
+  sitePresetClear: null
 };
 
 document.addEventListener('DOMContentLoaded', initializePopup);
@@ -25,6 +29,10 @@ async function initializePopup() {
   popupState.siteStatusText = document.getElementById('site-status-text');
   popupState.siteButton = document.getElementById('site-toggle');
   popupState.idleEnableButton = document.getElementById('idle-enable');
+  popupState.diagnosticText = document.getElementById('diagnostic-text');
+  popupState.sitePresetSelect = document.getElementById('site-preset');
+  popupState.sitePresetApply = document.getElementById('site-preset-apply');
+  popupState.sitePresetClear = document.getElementById('site-preset-clear');
 
   if (!toggle || !statusText) {
     console.warn('[DocsFocus] Popup markup missing expected elements.');
@@ -38,6 +46,9 @@ async function initializePopup() {
   if (popupState.idleEnableButton) {
     popupState.idleEnableButton.addEventListener('click', handleIdleEnableClick);
   }
+
+  popupState.sitePresetApply?.addEventListener('click', handleSitePresetApply);
+  popupState.sitePresetClear?.addEventListener('click', handleSitePresetClear);
 
   const activeTab = await resolveActiveTab();
   popupState.tabId = activeTab.id;
@@ -97,13 +108,24 @@ function renderStatus() {
     popupState.idleEnableButton.disabled = false;
   }
 
+  const diagnostic = popupState.diagnosticText;
+  if (diagnostic) {
+    diagnostic.hidden = true;
+    diagnostic.textContent = '';
+  }
+
   const {
     adhdMode,
     siteEligible,
     featuresActive,
     manualOverrides: storedOverrides,
     domain,
-    autoDetected
+    autoDetected,
+    eligibilitySource,
+    eligibilityMessage,
+    autoDetectedInfo,
+    domainSettings,
+    domainPreset
   } = popupState.contentState;
   const manualOverrides = storedOverrides && typeof storedOverrides === 'object' ? storedOverrides : {};
 
@@ -116,6 +138,18 @@ function renderStatus() {
   const overrideDisabled = overrideEntry?.enabled === false;
   const canOfferManualEnable =
     Boolean(derivedDomain) && (!popupState.tabUrl || popupState.tabUrl.startsWith('http'));
+  const domainHasOverride = Boolean(domainSettings);
+  const presetDisplay = domainHasOverride
+    ? domainPreset && domainPreset !== 'custom'
+      ? `Preset: ${domainPreset}`
+      : 'Preset: Custom'
+    : 'Preset: Global defaults';
+
+  const diagnosticLines = [];
+
+  if (eligibilityMessage) {
+    diagnosticLines.push(eligibilityMessage);
+  }
 
   if (!siteEligible) {
     if (overrideDisabled || autoDetected) {
@@ -126,17 +160,47 @@ function renderStatus() {
         popupState.idleEnableButton.hidden = false;
       }
     }
+    if (!eligibilityMessage && !overrideDisabled) {
+      diagnosticLines.push('DocsFocus could not confirm this page as documentation.');
+    }
+    if (diagnosticLines.length && domainHasOverride) {
+      diagnosticLines.push(presetDisplay);
+    }
+    if (diagnostic && diagnosticLines.length) {
+      diagnostic.hidden = false;
+      diagnostic.textContent = diagnosticLines.join(' ');
+    }
     return;
   }
 
   if (!adhdMode) {
     statusText.textContent = 'ADHD Mode is OFF. Enable to apply focus helpers.';
+    if (diagnosticLines.length === 0 && autoDetectedInfo?.label) {
+      diagnosticLines.push(autoDetectedInfo.label);
+    }
+    if (diagnostic && diagnosticLines.length) {
+      diagnostic.hidden = false;
+      diagnostic.textContent = diagnosticLines.join(' ');
+    }
     return;
   }
 
   statusText.textContent = featuresActive
     ? 'DocsFocus is active on this page.'
     : 'DocsFocus is preparing enhancements…';
+
+  if (eligibilitySource === 'manual-allow') {
+    diagnosticLines.push('Manually enabled for this domain.');
+  } else if (autoDetectedInfo?.label) {
+    diagnosticLines.push(autoDetectedInfo.label);
+  }
+
+  diagnosticLines.push(presetDisplay);
+
+  if (diagnostic && diagnosticLines.length) {
+    diagnostic.hidden = false;
+    diagnostic.textContent = diagnosticLines.join(' ');
+  }
 }
 
 function updateSiteControls() {
@@ -186,6 +250,30 @@ function updateSiteControls() {
   popupState.siteButton.textContent = label;
   popupState.siteButton.dataset.action = action;
   popupState.siteButton.disabled = false;
+
+  if (popupState.sitePresetSelect) {
+    if (!state?.domain) {
+      popupState.sitePresetSelect.value = 'global';
+      popupState.sitePresetSelect.disabled = true;
+    } else {
+      popupState.sitePresetSelect.disabled = false;
+      if (state.domainSettings) {
+        const presetValue = state.domainSettings.preset && state.domainSettings.preset !== 'custom'
+          ? state.domainSettings.preset
+          : 'custom';
+        popupState.sitePresetSelect.value = presetValue;
+      } else {
+        popupState.sitePresetSelect.value = 'global';
+      }
+    }
+  }
+
+  if (popupState.sitePresetApply) {
+    popupState.sitePresetApply.disabled = !state?.domain;
+  }
+  if (popupState.sitePresetClear) {
+    popupState.sitePresetClear.disabled = !state?.domain || !state.domainSettings;
+  }
 }
 
 async function resolveActiveTab() {
@@ -227,9 +315,12 @@ async function buildFallbackState(providedOverrides) {
     providedOverrides && typeof providedOverrides === 'object'
       ? Promise.resolve(providedOverrides)
       : popupState.helpers.getManualOverrides();
-  const [fallbackAdhd, overrides] = await Promise.all([
+
+  const [fallbackAdhd, overrides, globalSettingsRaw, domainSettingsMap] = await Promise.all([
     popupState.helpers.getAdhdMode(),
-    overridesSource
+    overridesSource,
+    popupState.helpers.getSettings(),
+    popupState.helpers.getDomainSettings()
   ]);
 
   const manualOverrides = overrides && typeof overrides === 'object' ? overrides : {};
@@ -238,22 +329,57 @@ async function buildFallbackState(providedOverrides) {
     popupState.tabUrl.startsWith('http') &&
     popupState.helpers.getDomainFromUrl;
   const domainFromUrl = canDeriveFromUrl ? popupState.helpers.getDomainFromUrl(popupState.tabUrl) : null;
+  const normalizedGlobal = popupState.helpers.normalizeSettings(globalSettingsRaw);
+  const domainSettings = domainFromUrl ? domainSettingsMap?.[domainFromUrl] ?? null : null;
+  const effectiveSettings = domainSettings
+    ? popupState.helpers.mergeSettings(normalizedGlobal, domainSettings)
+    : normalizedGlobal;
+  const matchInfo =
+    popupState.tabUrl && popupState.tabUrl.startsWith('http') && popupState.helpers.describeDocsMatch
+      ? popupState.helpers.describeDocsMatch(popupState.tabUrl)
+      : null;
   const autoDetected =
     popupState.tabUrl && popupState.tabUrl.startsWith('http') && popupState.helpers.matchesDocsPattern
       ? popupState.helpers.matchesDocsPattern(popupState.tabUrl)
-      : false;
+      : Boolean(matchInfo?.matched);
   const overrideEntry = domainFromUrl ? manualOverrides[domainFromUrl] : null;
-  const siteEligible = autoDetected || overrideEntry?.enabled === true;
+  let siteEligible = autoDetected || overrideEntry?.enabled === true;
+  let eligibilitySource = 'not-detected';
+  let eligibilityMessage =
+    (matchInfo && matchInfo.label) || (autoDetected ? 'Recognized documentation patterns.' : '');
+
+  if (overrideEntry?.enabled === true) {
+    siteEligible = true;
+    eligibilitySource = 'manual-allow';
+    eligibilityMessage = 'Manually enabled for this domain.';
+  } else if (overrideEntry?.enabled === false) {
+    siteEligible = false;
+    eligibilitySource = 'manual-block';
+    eligibilityMessage = 'Manually disabled for this domain.';
+  } else if (autoDetected) {
+    siteEligible = true;
+    eligibilitySource = 'auto';
+  } else {
+    siteEligible = false;
+    eligibilitySource = 'not-detected';
+    eligibilityMessage = eligibilityMessage || 'DocsFocus did not detect documentation signals.';
+  }
 
   return {
     adhdMode: fallbackAdhd,
-    settings: popupState.helpers.DEFAULT_SETTINGS,
+    settings: effectiveSettings,
+    globalSettings: normalizedGlobal,
     siteEligible,
     featuresActive: false,
     domain: domainFromUrl ?? null,
     url: popupState.tabUrl ?? null,
     manualOverrides,
-    autoDetected
+    autoDetected,
+    autoDetectedInfo: matchInfo,
+    domainSettings,
+    domainPreset: domainSettings?.preset ?? normalizedGlobal.preset,
+    eligibilitySource,
+    eligibilityMessage
   };
 }
 
@@ -264,6 +390,22 @@ function handleStorageChanges(changes, areaName) {
   if (!changes || !popupState.contentState) {
     return;
   }
+
+  let needsRender = false;
+  let needsControls = false;
+
+  if (Object.prototype.hasOwnProperty.call(changes, popupState.helpers.STORAGE_KEYS.SETTINGS)) {
+    const nextValue = changes[popupState.helpers.STORAGE_KEYS.SETTINGS]?.newValue;
+    const normalized = popupState.helpers.normalizeSettings(nextValue);
+    popupState.contentState.globalSettings = normalized;
+    if (!popupState.contentState.domainSettings) {
+      popupState.contentState.settings = normalized;
+      popupState.contentState.domainPreset = normalized.preset;
+    }
+    needsRender = true;
+    needsControls = true;
+  }
+
   if (Object.prototype.hasOwnProperty.call(changes, popupState.helpers.STORAGE_KEYS.ADHD_MODE)) {
     const nextValue = changes[popupState.helpers.STORAGE_KEYS.ADHD_MODE]?.newValue;
     popupState.contentState.adhdMode = Boolean(nextValue);
@@ -271,7 +413,30 @@ function handleStorageChanges(changes, areaName) {
     if (toggle && toggle.checked !== popupState.contentState.adhdMode) {
       toggle.checked = popupState.contentState.adhdMode;
     }
-    renderStatus();
+    needsRender = true;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(changes, popupState.helpers.STORAGE_KEYS.DOMAIN_SETTINGS)) {
+    const nextMap = changes[popupState.helpers.STORAGE_KEYS.DOMAIN_SETTINGS]?.newValue;
+    const normalizedMap = nextMap && typeof nextMap === 'object' ? nextMap : {};
+    const domainKey = popupState.contentState.domain;
+    const override = domainKey && normalizedMap[domainKey]
+      ? popupState.helpers.normalizeSettings(normalizedMap[domainKey])
+      : null;
+    popupState.contentState.domainSettings = override;
+    if (override) {
+      popupState.contentState.settings = popupState.helpers.mergeSettings(
+        popupState.contentState.globalSettings ?? popupState.helpers.DEFAULT_SETTINGS,
+        override
+      );
+      popupState.contentState.domainPreset = override.preset ?? 'custom';
+    } else {
+      const fallbackGlobal = popupState.contentState.globalSettings ?? popupState.helpers.DEFAULT_SETTINGS;
+      popupState.contentState.settings = fallbackGlobal;
+      popupState.contentState.domainPreset = fallbackGlobal.preset ?? 'balanced';
+    }
+    needsRender = true;
+    needsControls = true;
   }
 
   if (Object.prototype.hasOwnProperty.call(changes, popupState.helpers.STORAGE_KEYS.MANUAL_OVERRIDES)) {
@@ -280,10 +445,35 @@ function handleStorageChanges(changes, areaName) {
     popupState.contentState.manualOverrides = manualOverrides;
     if (popupState.contentState.domain) {
       const entry = manualOverrides[popupState.contentState.domain];
-      const enabled = entry?.enabled === true;
-      popupState.contentState.siteEligible = popupState.contentState.autoDetected || enabled;
+      if (entry?.enabled === true) {
+        popupState.contentState.siteEligible = true;
+        popupState.contentState.eligibilitySource = 'manual-allow';
+        popupState.contentState.eligibilityMessage = 'Manually enabled for this domain.';
+      } else if (entry?.enabled === false) {
+        popupState.contentState.siteEligible = false;
+        popupState.contentState.eligibilitySource = 'manual-block';
+        popupState.contentState.eligibilityMessage = 'Manually disabled for this domain.';
+      } else if (popupState.contentState.autoDetected) {
+        popupState.contentState.siteEligible = true;
+        popupState.contentState.eligibilitySource = 'auto';
+        popupState.contentState.eligibilityMessage =
+          popupState.contentState.autoDetectedInfo?.label ?? 'Recognized documentation patterns.';
+      } else {
+        popupState.contentState.siteEligible = false;
+        popupState.contentState.eligibilitySource = 'not-detected';
+        popupState.contentState.eligibilityMessage =
+          popupState.contentState.autoDetectedInfo?.label ??
+          'DocsFocus did not detect documentation signals.';
+      }
     }
+    needsRender = true;
+    needsControls = true;
+  }
+
+  if (needsControls) {
     updateSiteControls();
+  }
+  if (needsRender) {
     renderStatus();
   }
 }
@@ -380,5 +570,123 @@ async function applyManualOverride(domain, desired) {
   } else {
     // On failure attempt to refresh from content script/fallback to keep UI in sync.
     popupState.contentState = (await requestContentState(popupState.tabId)) ?? (await buildFallbackState());
+  }
+}
+
+async function handleSitePresetApply() {
+  if (!popupState.helpers || !popupState.sitePresetSelect) {
+    return;
+  }
+  const domain = popupState.contentState?.domain;
+  if (!domain) {
+    return;
+  }
+  const selected = popupState.sitePresetSelect.value;
+  if (selected === 'global') {
+    popupState.sitePresetSelect.value = 'global';
+    await handleSitePresetClear();
+    return;
+  }
+  if (selected === 'custom') {
+    if (chrome.runtime?.openOptionsPage) {
+      chrome.runtime.openOptionsPage();
+    }
+    return;
+  }
+
+  popupState.sitePresetApply.disabled = true;
+
+  try {
+    const presetSettings = popupState.helpers.applyPresetSettings
+      ? popupState.helpers.applyPresetSettings(selected, popupState.helpers.DEFAULT_SETTINGS)
+      : popupState.helpers.normalizeSettings({
+          ...popupState.helpers.DEFAULT_SETTINGS,
+          ...(popupState.helpers.SETTINGS_PRESETS?.[selected] ?? {})
+        });
+
+    await popupState.helpers.setDomainSettings(domain, presetSettings);
+
+    if (!popupState.contentState?.siteEligible) {
+      await applyManualOverride(domain, true);
+    }
+
+    if (popupState.tabId != null) {
+      try {
+        await sendMessageToTab(popupState.tabId, {
+          type: popupState.helpers.MESSAGE_TYPES.DOMAIN_SETTINGS,
+          payload: { domain, settings: presetSettings }
+        });
+      } catch (error) {
+        console.debug('[DocsFocus] Unable to push domain settings message:', error);
+      }
+    }
+
+    const refreshed = await requestContentState(popupState.tabId);
+    if (refreshed) {
+      popupState.contentState = refreshed;
+    } else {
+      popupState.contentState = {
+        ...popupState.contentState,
+        domainSettings: presetSettings,
+        domainPreset: presetSettings.preset ?? selected
+      };
+    }
+  } catch (error) {
+    console.error('[DocsFocus] Failed to apply site preset:', error);
+  } finally {
+    popupState.sitePresetApply.disabled = false;
+    updateSiteControls();
+    renderStatus();
+  }
+}
+
+async function handleSitePresetClear() {
+  if (!popupState.helpers) {
+    return;
+  }
+  const domain = popupState.contentState?.domain;
+  if (!domain) {
+    return;
+  }
+
+  if (popupState.sitePresetClear) {
+    popupState.sitePresetClear.disabled = true;
+  }
+  if (popupState.sitePresetSelect) {
+    popupState.sitePresetSelect.value = 'global';
+  }
+
+  try {
+    await popupState.helpers.clearDomainSettings(domain);
+
+    if (popupState.tabId != null) {
+      try {
+        await sendMessageToTab(popupState.tabId, {
+          type: popupState.helpers.MESSAGE_TYPES.DOMAIN_SETTINGS,
+          payload: { domain, clear: true }
+        });
+      } catch (error) {
+        console.debug('[DocsFocus] Unable to notify content script about domain clear:', error);
+      }
+    }
+
+    const refreshed = await requestContentState(popupState.tabId);
+    if (refreshed) {
+      popupState.contentState = refreshed;
+    } else {
+      popupState.contentState = {
+        ...popupState.contentState,
+        domainSettings: null,
+        domainPreset: popupState.contentState?.globalSettings?.preset ?? 'balanced'
+      };
+    }
+  } catch (error) {
+    console.error('[DocsFocus] Failed to clear domain settings:', error);
+  } finally {
+    if (popupState.sitePresetClear) {
+      popupState.sitePresetClear.disabled = false;
+    }
+    updateSiteControls();
+    renderStatus();
   }
 }

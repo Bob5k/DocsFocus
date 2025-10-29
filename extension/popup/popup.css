@@ -188,6 +188,11 @@ body {
   background: rgba(37, 99, 235, 0.08);
 }
 
+.popup__button--small {
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
 .popup__footer {
   display: flex;
   justify-content: flex-end;
@@ -206,4 +211,34 @@ body {
 
 .toggle__text {
   font-weight: 500;
+}
+
+.popup__select {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--popup-border);
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  color: var(--popup-text);
+}
+
+.popup__site-controls {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.popup__site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .popup__select {
+    background: rgba(15, 23, 42, 0.78);
+    color: rgba(226, 232, 240, 0.95);
+  }
 }

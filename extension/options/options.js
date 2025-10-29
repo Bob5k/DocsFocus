@@ -4,6 +4,14 @@ const ui = {
   keywords: null,
   highlightInCode: null,
   previewTlDr: null,
+  readingMask: null,
+  collapsibleSections: null,
+  trimChrome: null,
+  sectionTracker: null,
+  keyboardShortcuts: null,
+  dyslexiaMode: null,
+  presetSelect: null,
+  presetApply: null,
   saveButton: null,
   resetButton: null,
   status: null
@@ -28,11 +36,14 @@ async function initializeOptionsPage() {
     return;
   }
 
+  attachPresetListeners();
+
   const settings = await helpersModule.getSettings();
   populateForm(settings);
 
   ui.form.addEventListener('submit', handleSubmit);
   ui.resetButton?.addEventListener('click', handleReset);
+  ui.presetApply?.addEventListener('click', handlePresetApply);
 }
 
 function cacheDom() {
@@ -41,6 +52,14 @@ function cacheDom() {
   ui.keywords = document.getElementById('keywords');
   ui.highlightInCode = document.getElementById('highlight-in-code');
   ui.previewTlDr = document.getElementById('preview-tldr');
+  ui.readingMask = document.getElementById('reading-mask');
+  ui.collapsibleSections = document.getElementById('collapsible-sections');
+  ui.trimChrome = document.getElementById('trim-chrome');
+  ui.sectionTracker = document.getElementById('section-tracker');
+  ui.keyboardShortcuts = document.getElementById('keyboard-shortcuts');
+  ui.dyslexiaMode = document.getElementById('dyslexia-mode');
+  ui.presetSelect = document.getElementById('preset-select');
+  ui.presetApply = document.getElementById('preset-apply');
   ui.saveButton = document.getElementById('save-button');
   ui.resetButton = document.getElementById('reset-button');
   ui.status = document.getElementById('save-status');
@@ -59,6 +78,28 @@ function populateForm(settings) {
   }
   if (ui.previewTlDr) {
     ui.previewTlDr.checked = Boolean(normalized.previewTlDr);
+  }
+  if (ui.readingMask) {
+    ui.readingMask.checked = Boolean(normalized.readingMask);
+  }
+  if (ui.collapsibleSections) {
+    ui.collapsibleSections.checked = Boolean(normalized.collapsibleSections);
+  }
+  if (ui.trimChrome) {
+    ui.trimChrome.checked = Boolean(normalized.trimChrome);
+  }
+  if (ui.sectionTracker) {
+    ui.sectionTracker.checked = Boolean(normalized.sectionTracker);
+  }
+  if (ui.keyboardShortcuts) {
+    ui.keyboardShortcuts.checked = Boolean(normalized.keyboardShortcuts);
+  }
+  if (ui.dyslexiaMode) {
+    ui.dyslexiaMode.checked = Boolean(normalized.dyslexiaMode);
+  }
+  if (ui.presetSelect) {
+    const presets = ['balanced', 'skim', 'focus', 'deep'];
+    ui.presetSelect.value = presets.includes(normalized.preset) ? normalized.preset : 'custom';
   }
 }
 
@@ -107,12 +148,27 @@ function collectFormValues() {
   const keywordsValue = parseKeywords(ui.keywords?.value ?? '');
   const highlightInCode = Boolean(ui.highlightInCode?.checked);
   const previewTlDr = Boolean(ui.previewTlDr?.checked);
+  const readingMask = Boolean(ui.readingMask?.checked);
+  const collapsibleSections = Boolean(ui.collapsibleSections?.checked);
+  const trimChrome = Boolean(ui.trimChrome?.checked);
+  const sectionTracker = Boolean(ui.sectionTracker?.checked);
+  const keyboardShortcuts = Boolean(ui.keyboardShortcuts?.checked);
+  const dyslexiaMode = Boolean(ui.dyslexiaMode?.checked);
+  const presetSelection = ui.presetSelect?.value ?? 'custom';
+  const preset = ['balanced', 'skim', 'focus', 'deep'].includes(presetSelection) ? presetSelection : 'custom';
 
   return {
     collapseThreshold: thresholdValue,
     keywords: keywordsValue,
     highlightInCode,
-    previewTlDr
+    previewTlDr,
+    readingMask,
+    collapsibleSections,
+    trimChrome,
+    sectionTracker,
+    keyboardShortcuts,
+    dyslexiaMode,
+    preset
   };
 }
 
@@ -132,6 +188,51 @@ function setButtonsDisabled(disabled) {
   }
   if (ui.resetButton) {
     ui.resetButton.disabled = disabled;
+  }
+}
+
+function attachPresetListeners() {
+  const markCustom = () => {
+    if (ui.presetSelect && ui.presetSelect.value !== 'custom') {
+      ui.presetSelect.value = 'custom';
+    }
+  };
+
+  ui.threshold?.addEventListener('input', markCustom);
+  ui.keywords?.addEventListener('input', markCustom);
+
+  [
+    ui.highlightInCode,
+    ui.previewTlDr,
+    ui.readingMask,
+    ui.collapsibleSections,
+    ui.trimChrome,
+    ui.sectionTracker,
+    ui.keyboardShortcuts,
+    ui.dyslexiaMode
+  ].forEach((control) => control?.addEventListener('change', markCustom));
+}
+
+function handlePresetApply() {
+  if (!helpersModule || !ui.presetSelect) {
+    return;
+  }
+  const preset = ui.presetSelect.value;
+  if (!preset || preset === 'custom') {
+    return;
+  }
+
+  const applied = helpersModule.applyPresetSettings
+    ? helpersModule.applyPresetSettings(preset, helpersModule.DEFAULT_SETTINGS)
+    : helpersModule.normalizeSettings({
+        ...helpersModule.DEFAULT_SETTINGS,
+        ...(helpersModule.SETTINGS_PRESETS?.[preset] ?? {})
+      });
+
+  populateForm(applied);
+  if (ui.presetSelect) {
+    const available = ['balanced', 'skim', 'focus', 'deep'];
+    ui.presetSelect.value = available.includes(applied.preset) ? applied.preset : preset;
   }
 }
 

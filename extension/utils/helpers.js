@@ -1,7 +1,8 @@
 export const STORAGE_KEYS = {
   ADHD_MODE: 'docsfocusAdhdMode',
   SETTINGS: 'docsfocusSettings',
-  MANUAL_OVERRIDES: 'docsfocusManualOverrides'
+  MANUAL_OVERRIDES: 'docsfocusManualOverrides',
+  DOMAIN_SETTINGS: 'docsfocusDomainSettings'
 };
 
 export const MESSAGE_TYPES = {
@@ -9,7 +10,8 @@ export const MESSAGE_TYPES = {
   TOGGLE_ADHD: 'docsfocus:toggleAdhd',
   SETTINGS_UPDATED: 'docsfocus:settingsUpdated',
   MANUAL_OVERRIDE: 'docsfocus:manualOverride',
-  REQUEST_SETTINGS: 'docsfocus:requestSettings'
+  REQUEST_SETTINGS: 'docsfocus:requestSettings',
+  DOMAIN_SETTINGS: 'docsfocus:domainSettings'
 };
 
 export const DEFAULT_KEYWORDS = [
@@ -41,8 +43,71 @@ export const DEFAULT_SETTINGS = {
   collapseThreshold: 400,
   keywords: DEFAULT_KEYWORDS,
   highlightInCode: true,
-  previewTlDr: true
+  previewTlDr: true,
+  readingMask: true,
+  collapsibleSections: true,
+  trimChrome: false,
+  sectionTracker: true,
+  keyboardShortcuts: true,
+  dyslexiaMode: false,
+  preset: 'balanced'
 };
+
+export const SETTINGS_PRESETS = {
+  balanced: {
+    collapseThreshold: 400,
+    readingMask: true,
+    trimChrome: false,
+    previewTlDr: true,
+    sectionTracker: true,
+    keyboardShortcuts: true,
+    collapsibleSections: true,
+    dyslexiaMode: false
+  },
+  skim: {
+    collapseThreshold: 280,
+    readingMask: false,
+    trimChrome: true,
+    previewTlDr: true,
+    sectionTracker: true,
+    keyboardShortcuts: true,
+    collapsibleSections: true,
+    dyslexiaMode: false
+  },
+  focus: {
+    collapseThreshold: 340,
+    readingMask: true,
+    trimChrome: true,
+    previewTlDr: true,
+    sectionTracker: true,
+    keyboardShortcuts: true,
+    collapsibleSections: true,
+    dyslexiaMode: true
+  },
+  deep: {
+    collapseThreshold: 520,
+    readingMask: true,
+    trimChrome: false,
+    previewTlDr: true,
+    highlightInCode: true,
+    sectionTracker: true,
+    keyboardShortcuts: true,
+    collapsibleSections: true,
+    dyslexiaMode: true
+  }
+};
+
+const PRESET_COMPARISON_KEYS = [
+  'collapseThreshold',
+  'highlightInCode',
+  'previewTlDr',
+  'readingMask',
+  'collapsibleSections',
+  'trimChrome',
+  'sectionTracker',
+  'keyboardShortcuts',
+  'dyslexiaMode'
+];
 
 export const DOCS_PATTERNS = [
   /developer\.mozilla\.org/,
@@ -61,10 +126,44 @@ export const DOCS_PATTERNS = [
   /kotlinlang\.org\/docs/,
   /doc\.qt\.io/,
   /laravel\.com\/docs/,
-  /ruby-doc\.org/,
-  /\/docs\//,
-  /^https?:\/\/api\./
+  /ruby-doc\.org/
 ];
+
+const DOCS_HOST_KEYWORDS = [
+  'docs',
+  'doc',
+  'developer',
+  'devdocs',
+  'api',
+  'reference',
+  'manual'
+];
+
+const DOCS_PATH_KEYWORDS = [
+  'docs',
+  'documentation',
+  'reference',
+  'api',
+  'guide',
+  'manual',
+  'tutorial',
+  'handbook'
+];
+
+const DOCS_DOM_HINTS = [
+  'article',
+  'main',
+  '[data-docs-root]',
+  '[data-nav-type="docs"]',
+  '[class*="doc"]',
+  '[class*="Docs"]',
+  'nav.breadcrumb',
+  'div.breadcrumbs',
+  'div.sidebar',
+  'aside[role="complementary"]'
+];
+
+const DOCS_DOM_KEYWORD_REGEX = /\b(api|docs?|guide|reference|manual|sdk|cookbook|tutorial)\b/i;
 
 export const DEFAULT_OVERRIDE_ENTRY = {
   enabled: true,
@@ -230,6 +329,15 @@ export function normalizeSettings(settings) {
 
   merged.highlightInCode = Boolean(merged.highlightInCode);
   merged.previewTlDr = Boolean(merged.previewTlDr);
+  merged.readingMask = Boolean(merged.readingMask);
+  merged.collapsibleSections = Boolean(merged.collapsibleSections);
+  merged.trimChrome = Boolean(merged.trimChrome);
+  merged.sectionTracker = Boolean(merged.sectionTracker);
+  merged.keyboardShortcuts = Boolean(merged.keyboardShortcuts);
+  merged.dyslexiaMode = Boolean(merged.dyslexiaMode);
+  const desiredPreset = typeof merged.preset === 'string' ? merged.preset : DEFAULT_SETTINGS.preset;
+  const presetMatch = settingsMatchPreset(merged, desiredPreset) ? desiredPreset : findMatchingPreset(merged);
+  merged.preset = presetMatch;
 
   return merged;
 }
@@ -262,21 +370,204 @@ export async function updateManualOverride(domain, enabled) {
   return next;
 }
 
-export function matchesDocsPattern(url) {
-  try {
-    const targetUrl = typeof url === 'string' ? new URL(url) : url;
-    const href = targetUrl.href;
-    const host = targetUrl.host;
-    return DOCS_PATTERNS.some((pattern) => {
-      if (pattern instanceof RegExp) {
-        return pattern.test(href) || pattern.test(host);
+export async function getDomainSettings() {
+  const result = await withFallback((area) => storageGet(area, [STORAGE_KEYS.DOMAIN_SETTINGS])).catch(() => ({}));
+  const stored = result?.[STORAGE_KEYS.DOMAIN_SETTINGS];
+  if (stored && typeof stored === 'object') {
+    const normalized = {};
+    Object.entries(stored).forEach(([domain, value]) => {
+      if (value && typeof value === 'object') {
+        normalized[domain] = normalizeSettings(value);
       }
-      return false;
     });
-  } catch (error) {
-    console.warn('[DocsFocus] Unable to parse URL for matching:', error);
+    return normalized;
+  }
+  return {};
+}
+
+export async function setDomainSettings(domain, settings) {
+  if (!domain) {
+    return getDomainSettings();
+  }
+  const key = domain.toLowerCase();
+  const current = await getDomainSettings();
+  const next = { ...current, [key]: normalizeSettings(settings) };
+  await withFallback((area) => storageSet(area, { [STORAGE_KEYS.DOMAIN_SETTINGS]: next }));
+  return next;
+}
+
+export async function clearDomainSettings(domain) {
+  if (!domain) {
+    const empty = {};
+    await withFallback((area) => storageSet(area, { [STORAGE_KEYS.DOMAIN_SETTINGS]: empty }));
+    return empty;
+  }
+  const key = domain.toLowerCase();
+  const current = await getDomainSettings();
+  if (Object.prototype.hasOwnProperty.call(current, key)) {
+    delete current[key];
+    await withFallback((area) => storageSet(area, { [STORAGE_KEYS.DOMAIN_SETTINGS]: current }));
+  }
+  return current;
+}
+
+export function mergeSettings(baseSettings = DEFAULT_SETTINGS, overrides = {}) {
+  return normalizeSettings({
+    ...baseSettings,
+    ...(overrides ?? {})
+  });
+}
+
+export function applyPresetSettings(presetName, baseSettings = DEFAULT_SETTINGS) {
+  const preset = SETTINGS_PRESETS[presetName];
+  if (!preset) {
+    return normalizeSettings(baseSettings);
+  }
+  return normalizeSettings({
+    ...baseSettings,
+    ...preset,
+    preset: presetName
+  });
+}
+
+export function settingsMatchPreset(settings, presetName) {
+  if (!settings || !SETTINGS_PRESETS[presetName]) {
     return false;
   }
+  const baseline = {
+    ...DEFAULT_SETTINGS,
+    ...SETTINGS_PRESETS[presetName]
+  };
+  return PRESET_COMPARISON_KEYS.every((key) => {
+    const baselineValue = baseline[key];
+    const currentValue = settings[key];
+    if (typeof baselineValue === 'boolean') {
+      return Boolean(currentValue) === baselineValue;
+    }
+    return currentValue === baselineValue;
+  });
+}
+
+export function determinePreset(settings) {
+  const normalized = normalizeSettings(settings);
+  return normalized.preset;
+}
+
+function findMatchingPreset(settings) {
+  const presetNames = Object.keys(SETTINGS_PRESETS);
+  for (const name of presetNames) {
+    if (settingsMatchPreset(settings, name)) {
+      return name;
+    }
+  }
+  return 'custom';
+}
+
+export function analyzeDocsMatch(url, metadata = {}) {
+  const result = {
+    matched: false,
+    reason: null,
+    signals: []
+  };
+
+  let parsedUrl;
+  try {
+    parsedUrl = typeof url === 'string' ? new URL(url) : url;
+  } catch (error) {
+    console.warn('[DocsFocus] Unable to parse URL for matching:', error);
+    return result;
+  }
+
+  const href = parsedUrl.href;
+  const host = parsedUrl.host;
+  const pathname = parsedUrl.pathname || '';
+
+  const patternMatch = DOCS_PATTERNS.find((pattern) => pattern.test(href) || pattern.test(host));
+  if (patternMatch) {
+    result.matched = true;
+    result.reason = 'pattern';
+    result.signals.push(`Matched allowlist pattern ${patternMatch}`);
+    return result;
+  }
+
+  const hostTokens = host
+    .split('.')
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean);
+  if (hostTokens.some((token) => DOCS_HOST_KEYWORDS.includes(token))) {
+    result.matched = true;
+    result.reason = 'host-keyword';
+    result.signals.push(`Host contains keyword: ${host}`);
+    return result;
+  }
+
+  const pathSegments = pathname
+    .split('/')
+    .map((segment) => segment.trim().toLowerCase())
+    .filter(Boolean);
+  if (pathSegments.some((segment) => DOCS_PATH_KEYWORDS.includes(segment))) {
+    result.matched = true;
+    result.reason = 'path-keyword';
+    result.signals.push(`Path contains documentation keyword: ${pathname}`);
+    return result;
+  }
+
+  const documentRef = metadata.document ?? (typeof document !== 'undefined' ? document : null);
+  if (documentRef && documentRef.body) {
+    const hasDomHint = DOCS_DOM_HINTS.some((selector) => documentRef.querySelector(selector));
+    if (hasDomHint) {
+      const headline = documentRef.querySelector('h1, h2');
+      const headingText = headline?.textContent?.trim();
+      if (!headingText || DOCS_DOM_KEYWORD_REGEX.test(headingText)) {
+        result.matched = true;
+        result.reason = 'dom-structure';
+        result.signals.push('DOM structure resembles documentation layout');
+        return result;
+      }
+    }
+  }
+
+  return result;
+}
+
+export function matchesDocsPattern(url, metadata = {}) {
+  return analyzeDocsMatch(url, metadata).matched;
+}
+
+export function describeDocsMatch(url, metadata = {}) {
+  const analysis = analyzeDocsMatch(url, metadata);
+  if (!analysis.matched) {
+    return {
+      matched: false,
+      label: 'No documentation signals detected.',
+      signals: analysis.signals
+    };
+  }
+
+  let label = 'Recognized documentation site';
+  switch (analysis.reason) {
+    case 'pattern':
+      label = 'Recognized known documentation domain';
+      break;
+    case 'host-keyword':
+      label = 'Host looks like documentation';
+      break;
+    case 'path-keyword':
+      label = 'URL path looks like documentation';
+      break;
+    case 'dom-structure':
+      label = 'Page structure looks like documentation';
+      break;
+    default:
+      break;
+  }
+
+  return {
+    matched: true,
+    label,
+    reason: analysis.reason,
+    signals: analysis.signals
+  };
 }
 
 export function getDomainFromUrl(url = window.location.href) {

@@ -83,6 +83,12 @@ body {
   gap: 16px;
 }
 
+.options__section--preset {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .options__field {
   display: flex;
   flex-direction: column;
@@ -106,15 +112,31 @@ body {
   transition: border 160ms ease, box-shadow 160ms ease;
 }
 
+.options__select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #ffffff;
+  color: var(--text);
+  font-size: 16px;
+  transition: border 160ms ease, box-shadow 160ms ease;
+}
+
 @media (prefers-color-scheme: dark) {
   .options__input,
   .options__textarea {
     background: rgba(15, 23, 42, 0.6);
   }
+
+  .options__select {
+    background: rgba(15, 23, 42, 0.6);
+  }
 }
 
 .options__input:focus,
-.options__textarea:focus {
+.options__textarea:focus,
+.options__select:focus {
   outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--focus-ring);
@@ -192,6 +214,10 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.options__actions--inline {
+  justify-content: flex-start;
 }
 
 .options__button {

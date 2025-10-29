@@ -20,6 +20,7 @@
           </label>
         </div>
         <p id="status-text" class="popup__status" role="status" aria-live="polite"></p>
+        <p id="diagnostic-text" class="popup__hint" hidden></p>
         <button id="idle-enable" class="popup__button popup__button--outline" type="button" hidden>
           Enable DocsFocus anyway
         </button>
@@ -28,6 +29,21 @@
         <h2 class="popup__section-title" id="site-section-title">Site controls</h2>
         <p class="popup__hint" id="site-status-text"></p>
         <button id="site-toggle" class="popup__button" type="button"></button>
+        <div class="popup__site-controls">
+          <label class="popup__hint" for="site-preset">Preset for this site</label>
+          <select id="site-preset" class="popup__select" aria-label="DocsFocus preset for this domain">
+            <option value="global">Use global defaults</option>
+            <option value="balanced">Balanced</option>
+            <option value="skim">Skim (fast scan)</option>
+            <option value="focus">Focus</option>
+            <option value="deep">Deep dive</option>
+            <option value="custom">Custom</option>
+          </select>
+          <div class="popup__site-actions">
+            <button id="site-preset-apply" class="popup__button popup__button--small" type="button">Apply preset</button>
+            <button id="site-preset-clear" class="popup__button popup__button--outline popup__button--small" type="button">Clear site overrides</button>
+          </div>
+        </div>
       </section>
       <footer class="popup__footer">
         <a class="popup__link" href="https://github.com/" target="_blank" rel="noreferrer">Project Home</a>
