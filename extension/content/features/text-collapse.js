@@ -211,11 +211,18 @@ export function createTextCollapseFeature({ document, helpers }) {
     if (!trimmed) {
       return '';
     }
-    const sentenceMatch = trimmed.match(/^[^.!?]*[.!?]/);
-    if (sentenceMatch) {
-      return `${sentenceMatch[0].trim()} …`;
+    // Always show a shorter preview for better collapsing behavior
+    const summaryLength = 120;
+    if (trimmed.length <= summaryLength) {
+      return `${trimmed} …`;
     }
-    return `${trimmed.slice(0, 160).trim()} …`;
+    // Try to end at a word boundary
+    let summary = trimmed.slice(0, summaryLength);
+    const lastSpaceIndex = summary.lastIndexOf(' ');
+    if (lastSpaceIndex > summaryLength * 0.7) { // Only cut at word boundary if it's not too early
+      summary = summary.slice(0, lastSpaceIndex);
+    }
+    return `${summary.trim()} …`;
   }
 
   return {

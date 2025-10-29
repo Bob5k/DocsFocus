@@ -40,7 +40,7 @@ export const DEFAULT_KEYWORDS = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  collapseThreshold: 400,
+  collapseThreshold: 350,
   keywords: DEFAULT_KEYWORDS,
   highlightInCode: true,
   previewTlDr: true,
@@ -56,7 +56,7 @@ export const DEFAULT_SETTINGS = {
 
 export const SETTINGS_PRESETS = {
   balanced: {
-    collapseThreshold: 400,
+    collapseThreshold: 350,
     readingMask: true,
     trimChrome: false,
     previewTlDr: true,
