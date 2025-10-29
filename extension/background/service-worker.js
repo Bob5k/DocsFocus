@@ -166,9 +166,7 @@ async function requestStateFromTab(tabId) {
 
 async function hasHostPermission(domain) {
 	const origins = buildOriginPatterns(domain);
-	return await chrome.permissions
-		.contains({ origins })
-		.catch(() => false);
+	return await chrome.permissions.contains({ origins }).catch(() => false);
 }
 
 async function requestHostPermission(domain) {

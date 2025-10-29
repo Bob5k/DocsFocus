@@ -97,25 +97,6 @@ body {
 	gap: 16px;
 }
 
-.options__section--toggles .switch {
-	padding: 12px 16px;
-	border-radius: 12px;
-	border: 1px solid var(--border);
-	background: rgba(148, 163, 184, 0.08);
-	transition:
-		background 160ms ease,
-		border-color 160ms ease;
-}
-
-.options__section--toggles .switch:hover {
-	background: rgba(37, 99, 235, 0.08);
-	border-color: rgba(37, 99, 235, 0.25);
-}
-
-.options__section--toggles .switch:focus-within {
-	border-color: var(--primary);
-}
-
 .options__section--preset {
 	display: flex;
 	flex-direction: column;
@@ -168,16 +149,6 @@ body {
 
 	.options__select {
 		background: rgba(15, 23, 42, 0.6);
-	}
-
-	.options__section--toggles .switch {
-		background: rgba(148, 163, 184, 0.16);
-		border-color: rgba(148, 163, 184, 0.28);
-	}
-
-	.options__section--toggles .switch:hover {
-		background: rgba(96, 165, 250, 0.18);
-		border-color: rgba(96, 165, 250, 0.4);
 	}
 
 	.options__range-value {
@@ -263,6 +234,37 @@ body {
 
 .switch__text {
 	color: var(--text);
+}
+
+.options__section--toggles .switch {
+	padding: 12px 16px;
+	border-radius: 12px;
+	border: 1px solid var(--border);
+	background: rgba(148, 163, 184, 0.08);
+	transition:
+		background 160ms ease,
+		border-color 160ms ease;
+}
+
+.options__section--toggles .switch:hover {
+	background: rgba(37, 99, 235, 0.08);
+	border-color: rgba(37, 99, 235, 0.25);
+}
+
+.options__section--toggles .switch:focus-within {
+	border-color: var(--primary);
+}
+
+@media (prefers-color-scheme: dark) {
+	.options__section--toggles .switch {
+		background: rgba(148, 163, 184, 0.16);
+		border-color: rgba(148, 163, 184, 0.28);
+	}
+
+	.options__section--toggles .switch:hover {
+		background: rgba(96, 165, 250, 0.18);
+		border-color: rgba(96, 165, 250, 0.4);
+	}
 }
 
 .options__range {
