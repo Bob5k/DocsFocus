@@ -4,7 +4,7 @@ The system SHALL enable behaviors only on documentation-like pages identified by
 
 #### Scenario: Pattern-based detection (comprehensive defaults)
 - **WHEN** the current URL matches known patterns
-- **THEN** DocsFocus features SHALL be eligible to activate (subject to ADHD Mode)
+- **THEN** DocsFocus features SHALL be eligible to activate (subject to Focus Mode)
 - Known patterns SHALL include, at minimum: `developer.mozilla.org`, `docs.github.com`, `npmjs.com/package`, `docs.python.org`, `doc.rust-lang.org`, `docs.rs`, `devdocs.io`, `readthedocs.io`, `go.dev`, `pkg.go.dev`, `nodejs.org/api`, `docs.oracle.com`, `learn.microsoft.com`, `docs.djangoproject.com`, `kotlinlang.org/docs`, `doc.qt.io`, `laravel.com/docs`, `ruby-doc.org`, paths containing `/docs/`, subdomains starting with `api.`
 
 #### Scenario: Manual override

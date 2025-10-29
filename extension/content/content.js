@@ -16,7 +16,7 @@
 			normalizeSettings,
 			getSettings,
 			getDomainSettings,
-			getAdhdMode,
+			getFocusMode,
 			getManualOverrides,
 			mergeSettings,
 			matchesDocsPattern,
@@ -27,7 +27,7 @@
 		const baseSettings = normalizeSettings(DEFAULT_SETTINGS);
 		const state = {
 			initialized: false,
-			adhdMode: false,
+			focusMode: false,
 			settings: baseSettings,
 			globalSettings: baseSettings,
 			manualOverrides: {},
@@ -52,7 +52,7 @@
 				const payload = {
 					context,
 					domain: state.domain,
-					adhdMode: state.adhdMode,
+					focusMode: state.focusMode,
 					siteEligible: state.siteEligible,
 					eligibilitySource: state.eligibilitySource,
 					autoDetected: state.autoDetected,
@@ -129,7 +129,7 @@
 		}
 
 		function applyActivation() {
-			const shouldActivate = state.adhdMode && state.siteEligible;
+			const shouldActivate = state.focusMode && state.siteEligible;
 			if (shouldActivate) {
 				activateFeatures();
 				logDiagnostics("activate");
@@ -143,7 +143,7 @@
 
 		function getStateSnapshot() {
 			return {
-				adhdMode: state.adhdMode,
+				focusMode: state.focusMode,
 				settings: state.settings,
 				globalSettings: state.globalSettings,
 				manualOverrides: state.manualOverrides,
@@ -201,10 +201,10 @@
 		}
 
 		async function bootstrapState() {
-			const [manualOverrides, adhdMode, settings, domainSettingsMap] =
+			const [manualOverrides, focusMode, settings, domainSettingsMap] =
 				await Promise.all([
 					getManualOverrides(),
-					getAdhdMode(),
+					getFocusMode(),
 					getSettings(),
 					getDomainSettings(),
 				]);
@@ -218,7 +218,7 @@
 				: null;
 
 			state.manualOverrides = manualOverrides;
-			state.adhdMode = adhdMode;
+			state.focusMode = focusMode;
 			state.globalSettings = normalizedGlobal;
 			state.domainSettingsMap = domainMap;
 			state.domainSettings = domainOverride;
@@ -246,10 +246,13 @@
 				}
 			};
 
-			maybeUpdate(STORAGE_KEYS.ADHD_MODE, (value) => {
-				state.adhdMode = Boolean(value);
+			const updateFocusMode = (value) => {
+				state.focusMode = Boolean(value);
 				applyActivation();
-			});
+			};
+
+			maybeUpdate(STORAGE_KEYS.FOCUS_MODE, updateFocusMode);
+			maybeUpdate("docsfocusAdhdMode", updateFocusMode);
 
 			maybeUpdate(STORAGE_KEYS.SETTINGS, (value) => {
 				state.globalSettings = normalizeSettings(value);
@@ -305,8 +308,9 @@
 					sendResponse({ ok: true, state: getStateSnapshot() });
 					return false;
 				}
-				case MESSAGE_TYPES.TOGGLE_ADHD: {
-					state.adhdMode = Boolean(message.payload?.enabled);
+				case MESSAGE_TYPES.TOGGLE_FOCUS:
+				case "docsfocus:toggleAdhd": {
+					state.focusMode = Boolean(message.payload?.enabled);
 					applyActivation();
 					sendResponse({ ok: true, state: getStateSnapshot() });
 					return false;

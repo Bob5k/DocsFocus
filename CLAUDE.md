@@ -21,10 +21,10 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Project Overview
 
-**DocsFocus** is a specialized Chrome Extension designed to help developers with ADHD (and anyone scanning dense documentation) read technical documentation faster and with less cognitive load. It processes content locally in the browser without AI, telemetry, or external network requests.
+**DocsFocus** is a specialized Chrome Extension designed to help developers stay focused (especially when scanning dense documentation) read technical documentation faster and with less cognitive load. It processes content locally in the browser without AI, telemetry, or external network requests.
 
 ### Target Audience
-- **Primary users**: Developers with ADHD, dyslexia, or focus challenges
+- **Primary users**: Developers who need stronger focus support, including readers with dyslexia or attention-related challenges
 - **Secondary users**: Any developer who wants to scan technical documentation more efficiently
 - **Target sites**: Curated documentation websites (MDN, GitHub Docs, npm, Python docs, etc.)
 
@@ -68,7 +68,7 @@ extension/
 
 ## Key Features
 
-### 1. ADHD Mode Toggle (Global Control)
+### 1. Focus Mode Toggle (Global Control)
 - Main enable/disable mechanism for all features
 - Persistent across browser sessions
 - Default OFF to avoid unexpected behavior
@@ -137,7 +137,7 @@ The extension supports 20+ major documentation platforms including:
 
 ### Activation Flow
 ```
-URL Detection → Manual Override Check → ADHD Mode Check → Feature Activation
+URL Detection → Manual Override Check → Focus Mode Check → Feature Activation
 ```
 
 ### Manual Overrides
@@ -234,7 +234,7 @@ URL Detection → Manual Override Check → ADHD Mode Check → Feature Activati
 ### For Users
 1. Install the DocsFocus extension from Chrome Web Store
 2. Navigate to supported documentation site
-3. Click extension icon to enable ADHD Mode
+3. Click extension icon to enable Focus Mode
 4. Choose appropriate preset (Balanced, Skim, Focus, Deep)
 5. Fine-tune settings in options page if needed
 

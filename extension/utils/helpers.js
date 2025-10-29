@@ -1,5 +1,5 @@
 export const STORAGE_KEYS = {
-	ADHD_MODE: "docsfocusAdhdMode",
+	FOCUS_MODE: "docsfocusFocusMode",
 	SETTINGS: "docsfocusSettings",
 	MANUAL_OVERRIDES: "docsfocusManualOverrides",
 	DOMAIN_SETTINGS: "docsfocusDomainSettings",
@@ -7,9 +7,13 @@ export const STORAGE_KEYS = {
 	PRESET_VISIBILITY: "docsfocusPresetVisibility",
 };
 
+const LEGACY_STORAGE_KEYS = {
+	FOCUS_MODE: "docsfocusAdhdMode",
+};
+
 export const MESSAGE_TYPES = {
 	GET_STATE: "docsfocus:getState",
-	TOGGLE_ADHD: "docsfocus:toggleAdhd",
+	TOGGLE_FOCUS: "docsfocus:toggleFocus",
 	SETTINGS_UPDATED: "docsfocus:settingsUpdated",
 	MANUAL_OVERRIDE: "docsfocus:manualOverride",
 	REQUEST_SETTINGS: "docsfocus:requestSettings",
@@ -292,17 +296,40 @@ function createLocalStorageBridge(localStorage) {
 	};
 }
 
-export async function getAdhdMode() {
+export async function getFocusMode() {
 	const result = await withFallback((area) =>
-		storageGet(area, [STORAGE_KEYS.ADHD_MODE]),
+		storageGet(area, [STORAGE_KEYS.FOCUS_MODE]),
 	).catch(() => ({}));
-	const value = result?.[STORAGE_KEYS.ADHD_MODE];
+	let value = result?.[STORAGE_KEYS.FOCUS_MODE];
+
+	if (typeof value !== "boolean") {
+		const legacyResult = await withFallback((area) =>
+			storageGet(area, [LEGACY_STORAGE_KEYS.FOCUS_MODE]),
+		).catch(() => ({}));
+		const legacyValue = legacyResult?.[LEGACY_STORAGE_KEYS.FOCUS_MODE];
+
+		if (typeof legacyValue === "boolean") {
+			value = legacyValue;
+			try {
+				await setFocusMode(legacyValue);
+				await withFallback((area) =>
+					storageRemove(area, [LEGACY_STORAGE_KEYS.FOCUS_MODE]),
+				).catch(() => {});
+			} catch (migrationError) {
+				console.warn(
+					"[DocsFocus] Failed to migrate legacy focus mode value:",
+					migrationError,
+				);
+			}
+		}
+	}
+
 	return typeof value === "boolean" ? value : false;
 }
 
-export async function setAdhdMode(enabled) {
+export async function setFocusMode(enabled) {
 	await withFallback((area) =>
-		storageSet(area, { [STORAGE_KEYS.ADHD_MODE]: enabled }),
+		storageSet(area, { [STORAGE_KEYS.FOCUS_MODE]: enabled }),
 	);
 }
 

@@ -1,9 +1,9 @@
-# DocsFocus - ADHD-Friendly Documentation Reader
+# DocsFocus - Focus-Friendly Documentation Reader
 
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-green?logo=google-chrome)](https://github.com/Bob5k/DocsFocus)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**DocsFocus** is a specialized Chrome extension designed to help developers with ADHD (and anyone scanning dense documentation) read technical documentation faster and with less cognitive load. It transforms overwhelming documentation pages into focused, readable content without AI, telemetry, or external network requests.
+**DocsFocus** is a specialized Chrome extension designed to help developers stay focused (especially when scanning dense documentation) read technical documentation faster and with less cognitive load. It transforms overwhelming documentation pages into focused, readable content without AI, telemetry, or external network requests.
 
 ## ✨ Key Features
 
@@ -64,7 +64,7 @@ Maximum assistance for thorough comprehension and analysis.
 ### Basic Usage
 1. Navigate to any supported documentation site
 2. Click the DocsFocus icon in your browser toolbar
-3. Toggle **ADHD Mode** to enable features
+3. Toggle **Focus Mode** to enable features
 4. Select a preset that matches your reading goal
 5. Fine-tune settings in the options page if needed
 
@@ -130,7 +130,7 @@ Configure different presets and settings for specific documentation sites:
 
 When DocsFocus is active:
 
-- **Alt + D**: Toggle ADHD Mode on/off
+- **Alt + D**: Toggle Focus Mode on/off
 - **Alt + S**: Cycle through presets (Balanced → Skim → Focus → Deep)
 - **Alt + R**: Toggle reading mask
 - **Alt + C**: Toggle text collapse
@@ -149,7 +149,7 @@ npm run package     # Zips the extension into dist/docsfocus.zip using the zip C
 1. Run `npm run package` (optional) or ensure the `extension/` folder is present
 2. Open `chrome://extensions` and enable **Developer mode**
 3. Click **Load unpacked** and select the `extension/` directory
-4. Pin the extension and use the popup toggle to activate ADHD Mode on documentation pages
+4. Pin the extension and use the popup toggle to activate Focus Mode on documentation pages
 
 ### Project Structure
 - `extension/` – Manifest, background worker, content script, popup/options UI, icons, and shared helpers
@@ -175,7 +175,7 @@ npm run package     # Zips the extension into dist/docsfocus.zip using the zip C
 ### Common Issues
 
 **Extension not activating on documentation site:**
-1. Check if ADHD Mode is enabled (toggle in popup)
+1. Check if Focus Mode is enabled (toggle in popup)
 2. Verify site is supported or manually enable for the domain
 3. Refresh the page after changing settings
 
@@ -187,7 +187,7 @@ npm run package     # Zips the extension into dist/docsfocus.zip using the zip C
 **Features not working after update:**
 1. Refresh the active documentation page
 2. Check Chrome console for any error messages
-3. Try disabling and re-enabling ADHD Mode
+3. Try disabling and re-enabling Focus Mode
 
 ### Debug Information
 Enable debug logging by:
@@ -202,7 +202,7 @@ MIT License – see `LICENSE` (to be added) or use your preferred OSS license be
 
 ## 🙏 Acknowledgments
 
-- Built for developers with ADHD and the broader neurodivergent community
+- Built for developers seeking extra focus support and the broader neurodivergent community
 - Inspired by the challenges of reading dense technical documentation
 - Privacy-focused approach respecting user autonomy
 - Accessibility standards ensuring inclusive design

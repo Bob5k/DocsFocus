@@ -33,7 +33,7 @@ async function initializePopup() {
 		return;
 	}
 
-	const toggle = document.getElementById("adhd-toggle");
+	const toggle = document.getElementById("focus-toggle");
 	const statusText = document.getElementById("status-text");
 	popupState.siteSection = document.getElementById("site-section");
 	popupState.siteStatusText = document.getElementById("site-status-text");
@@ -78,22 +78,22 @@ async function initializePopup() {
 		popupState.contentState = await buildFallbackState();
 	}
 
-	toggle.checked = Boolean(popupState.contentState.adhdMode);
+	toggle.checked = Boolean(popupState.contentState.focusMode);
 	renderStatus();
 	updateSiteControls();
 
 	toggle.addEventListener("change", async (event) => {
 		const enabled = Boolean(event.target.checked);
-		console.log(`[DocsFocus] ADHD Mode toggle changed to: ${enabled}`);
+		console.log(`[DocsFocus] Focus Mode toggle changed to: ${enabled}`);
 		toggle.disabled = true;
 		try {
-			await popupState.helpers.setAdhdMode(enabled);
-			console.log("[DocsFocus] ADHD Mode setting saved");
+			await popupState.helpers.setFocusMode(enabled);
+			console.log("[DocsFocus] Focus Mode setting saved");
 
 			if (popupState.tabId != null) {
 				try {
 					await sendMessageToTab(popupState.tabId, {
-						type: popupState.helpers.MESSAGE_TYPES.TOGGLE_ADHD,
+						type: popupState.helpers.MESSAGE_TYPES.TOGGLE_FOCUS,
 						payload: { enabled },
 					});
 					console.log("[DocsFocus] Toggle message sent to content script");
@@ -107,23 +107,23 @@ async function initializePopup() {
 					// Still update local state even if content script communication fails
 					popupState.contentState = {
 						...popupState.contentState,
-						adhdMode: enabled,
+						focusMode: enabled,
 						featuresActive: enabled && popupState.contentState.siteEligible,
 					};
 				}
 			} else {
 				popupState.contentState = {
 					...popupState.contentState,
-					adhdMode: enabled,
+					focusMode: enabled,
 					featuresActive: enabled && popupState.contentState.siteEligible,
 				};
 			}
 		} catch (error) {
-			console.error("[DocsFocus] Failed to toggle ADHD Mode:", error);
+			console.error("[DocsFocus] Failed to toggle Focus Mode:", error);
 			event.target.checked = !enabled; // revert on failure
 			const statusText = document.getElementById("status-text");
 			if (statusText) {
-				statusText.textContent = `Error: Failed to ${enabled ? "enable" : "disable"} ADHD Mode`;
+				statusText.textContent = `Error: Failed to ${enabled ? "enable" : "disable"} Focus Mode`;
 				setTimeout(() => renderStatus(), 3000);
 			}
 		} finally {
@@ -205,7 +205,7 @@ function renderStatus() {
 	}
 
 	const {
-		adhdMode,
+		focusMode,
 		siteEligible,
 		featuresActive,
 		manualOverrides: storedOverrides,
@@ -275,8 +275,8 @@ function renderStatus() {
 		return;
 	}
 
-	if (!adhdMode) {
-		statusText.textContent = "ADHD Mode is OFF. Enable to apply focus helpers.";
+	if (!focusMode) {
+		statusText.textContent = "Focus Mode is OFF. Enable to apply focus helpers.";
 		if (diagnosticLines.length === 0 && autoDetectedInfo?.label) {
 			addDiagnostic(autoDetectedInfo.label);
 		}
@@ -485,9 +485,9 @@ async function buildFallbackState(providedOverrides) {
 			? Promise.resolve(providedOverrides)
 			: popupState.helpers.getManualOverrides();
 
-	const [fallbackAdhd, overrides, globalSettingsRaw, domainSettingsMap] =
+	const [fallbackFocus, overrides, globalSettingsRaw, domainSettingsMap] =
 		await Promise.all([
-			popupState.helpers.getAdhdMode(),
+			popupState.helpers.getFocusMode(),
 			overridesSource,
 			popupState.helpers.getSettings(),
 			popupState.helpers.getDomainSettings(),
@@ -545,7 +545,7 @@ async function buildFallbackState(providedOverrides) {
 	}
 
 	return {
-		adhdMode: fallbackAdhd,
+		focusMode: fallbackFocus,
 		settings: effectiveSettings,
 		globalSettings: normalizedGlobal,
 		siteEligible,
@@ -586,13 +586,21 @@ function handleStorageChanges(changes, areaName) {
 		needsControls = true;
 	}
 
-	if (Object.hasOwn(changes, popupState.helpers.STORAGE_KEYS.ADHD_MODE)) {
-		const nextValue =
-			changes[popupState.helpers.STORAGE_KEYS.ADHD_MODE]?.newValue;
-		popupState.contentState.adhdMode = Boolean(nextValue);
-		const toggle = document.getElementById("adhd-toggle");
-		if (toggle && toggle.checked !== popupState.contentState.adhdMode) {
-			toggle.checked = popupState.contentState.adhdMode;
+	if (
+		Object.hasOwn(changes, popupState.helpers.STORAGE_KEYS.FOCUS_MODE) ||
+		Object.hasOwn(changes, "docsfocusAdhdMode")
+	) {
+		const focusKey = Object.hasOwn(
+			changes,
+			popupState.helpers.STORAGE_KEYS.FOCUS_MODE,
+		)
+			? popupState.helpers.STORAGE_KEYS.FOCUS_MODE
+			: "docsfocusAdhdMode";
+		const nextValue = changes[focusKey]?.newValue;
+		popupState.contentState.focusMode = Boolean(nextValue);
+		const toggle = document.getElementById("focus-toggle");
+		if (toggle && toggle.checked !== popupState.contentState.focusMode) {
+			toggle.checked = popupState.contentState.focusMode;
 		}
 		needsRender = true;
 	}

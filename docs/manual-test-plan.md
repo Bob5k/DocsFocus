@@ -4,7 +4,7 @@
 
 1. **MDN Reference Page**
    - Navigate to https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise
-   - Enable ADHD Mode.
+   - Enable Focus Mode.
    - Confirm paragraphs > threshold collapse with Show more/less controls.
    - Verify first code example preview is injected near the section heading with Jump link.
    - Check highlighted keywords (promise, async) appear in prose and code overlay.
@@ -12,7 +12,7 @@
 2. **GitHub REST API Documentation**
    - Visit https://docs.github.com/en/rest
    - Ensure automatic detection activates features.
-   - Toggle ADHD Mode OFF → DOM reverts (no previews/highlights).
+   - Toggle Focus Mode OFF → DOM reverts (no previews/highlights).
    - Toggle back ON → enhancements return without page reload.
 
 3. **npm Package Page**
@@ -30,7 +30,7 @@
 
 5. **Disable for Domain**
    - On an auto-detected site (e.g., MDN), press “Disable on this domain”.
-   - Confirm features deactivate even with ADHD Mode ON.
+   - Confirm features deactivate even with Focus Mode ON.
    - Press “Re-enable on this domain” to restore default behavior.
 
 ## Settings Regression

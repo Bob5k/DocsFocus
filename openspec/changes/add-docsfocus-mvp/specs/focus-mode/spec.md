@@ -1,13 +1,13 @@
 ## ADDED Requirements
-### Requirement: ADHD Mode Global Toggle
+### Requirement: Focus Mode Global Toggle
 Users SHALL be able to enable or disable all DocsFocus behaviors with a single toggle exposed via the extension popup.
 
 #### Scenario: Toggle on enables features
-- **WHEN** the user turns ADHD Mode ON in the popup
+- **WHEN** the user turns Focus Mode ON in the popup
 - **THEN** content behaviors (text collapse, code first, keyword highlighting) SHALL activate on supported pages without reloading
 
 #### Scenario: Toggle off disables features
-- **WHEN** ADHD Mode is OFF
+- **WHEN** Focus Mode is OFF
 - **THEN** no DOM modifications SHALL be applied and previously applied modifications SHALL be reverted where feasible (e.g., un-collapse, clear highlights)
 
 #### Scenario: Persisted state
@@ -16,7 +16,7 @@ Users SHALL be able to enable or disable all DocsFocus behaviors with a single t
 
 #### Scenario: Default OFF after install
 - **WHEN** the extension is installed or reset to defaults
-- **THEN** ADHD Mode SHALL be OFF by default until the user enables it
+- **THEN** Focus Mode SHALL be OFF by default until the user enables it
 
 #### Scenario: Accessibility of popup control
 - **WHEN** navigating the popup with keyboard

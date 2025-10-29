@@ -1,7 +1,7 @@
 ## 1. Implementation
 - [x] 1.1 Utwórz szkielet MV3: `extension/manifest.json`, katalogi `content/`, `popup/`, `options/`, `background/`
 - [x] 1.2 Zaimplementuj content script bazowy z wstrzykiwaniem `styles.css`
-- [x] 1.3 Popup: przełącznik „ADHD Mode” (domyślnie OFF; persist w `chrome.storage.sync` z lokalnym fallbackiem)
+- [x] 1.3 Popup: przełącznik „Focus Mode” (domyślnie OFF; persist w `chrome.storage.sync` z lokalnym fallbackiem)
 - [x] 1.4 Options (Settings) UI: pola konfiguracyjne i zapisywanie (collapse threshold, keyword list, TL;DR preview toggle, code-in-blocks highlighting toggle)
 - [x] 1.5 Funkcja: `text-collapse` (prog konfigurowalny; domyślnie 400; pierwsze zdanie + „Show more/less”) z ARIA
 - [x] 1.6 Funkcja: `code-first` jako TL;DR preview (klon skrótu + link „Jump to full example”; bez przenoszenia oryginału)

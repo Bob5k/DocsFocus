@@ -105,10 +105,10 @@ Users SHALL be able to apply any preset (built-in or custom) to specific domains
 ## REMOVED Requirements
 
 ### Requirement: Balanced Preset
-**Reason**: Consolidating similar presets to reduce decision paralysis for ADHD users. Deep Focus replaces both Balanced and Focus with optimized middle-ground settings.
+**Reason**: Consolidating similar presets to reduce decision paralysis for focus-challenged readers. Deep Focus replaces both Balanced and Focus with optimized middle-ground settings.
 
 ### Requirement: Focus Preset
-**Reason**: Consolidating similar presets to reduce decision paralysis for ADHD users. Deep Focus replaces both Balanced and Focus with optimized middle-ground settings.
+**Reason**: Consolidating similar presets to reduce decision paralysis for focus-challenged readers. Deep Focus replaces both Balanced and Focus with optimized middle-ground settings.
 
 ### Requirement: Global Preset Option for Domains
 **Reason**: Simplified model—domains either have a specific preset applied or use global settings. The "global" option in domain dropdowns is redundant; clearing domain settings achieves the same result.

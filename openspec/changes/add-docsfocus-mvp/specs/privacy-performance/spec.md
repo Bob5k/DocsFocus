@@ -11,7 +11,7 @@ The system MUST operate locally with strong privacy guarantees and meet strict p
 - **THEN** it SHALL comply with MV3 (service worker background, no persistent background pages)
 
 #### Scenario: Activation performance budget
-- **WHEN** a supported page loads with ADHD Mode ON
+- **WHEN** a supported page loads with Focus Mode ON
 - **THEN** initial activation (DOM scanning + rewrites) SHOULD complete within 150 ms on a typical docs page and SHOULD avoid layout thrash (batch DOM writes)
 
 #### Scenario: Bundle size budget

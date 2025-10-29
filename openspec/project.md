@@ -1,7 +1,7 @@
 # Project Context
 
 ## Purpose
-DocsFocus is an open‑source Chrome Extension that helps developers (especially those with ADHD, dyslexia, or difficulty focusing) read technical documentation faster and with less cognitive load. It does this locally in the browser, without AI and without tracking, by collapsing long paragraphs, surfacing code examples early, and highlighting key technical terms.
+DocsFocus is an open‑source Chrome Extension that helps developers stay focused (including readers with dyslexia or other focus challenges) read technical documentation faster and with less cognitive load. It does this locally in the browser, without AI and without tracking, by collapsing long paragraphs, surfacing code examples early, and highlighting key technical terms.
 
 ## Tech Stack
 - Chrome Manifest V3 (MV3)
@@ -23,10 +23,10 @@ DocsFocus is an open‑source Chrome Extension that helps developers (especially
 ### Architecture Patterns
 - MV3 extension shell:
   - `content/` script performs DOM detection and enhancements
-  - `popup/` provides ADHD Mode toggle (global feature enable/disable)
+  - `popup/` provides Focus Mode toggle (global feature enable/disable)
   - `options/` (Settings) provides configuration UI for thresholds, keyword list, TL;DR preview and code highlighting toggles
   - `background/service-worker.js` optional (sync, versioning)
-- Feature flags controlled by ADHD Mode and per‑setting toggles
+- Feature flags controlled by Focus Mode and per‑setting toggles
 - Detection patterns gate activation to documentation‑like sites, plus a manual override in the popup (persist per domain where feasible)
 - DOM safety first: do not break anchors, semantics, or copy/paste; avoid layout thrash (batch mutations)
 
@@ -44,7 +44,7 @@ DocsFocus is an open‑source Chrome Extension that helps developers (especially
 ## Domain Context
 - Target content: technical documentation websites where developers learn APIs/libraries
 - Core behaviors (MVP):
-  - ADHD Mode (global toggle, default OFF)
+  - Focus Mode (global toggle, default OFF)
   - Hide Long Paragraphs (configurable threshold; default 400 chars)
   - Code Examples First as TL;DR preview (clone + jump link; original remains in place)
   - Semantic Keyword Highlighting (prose and line‑level in code; configurable keyword list; non‑destructive)
@@ -64,7 +64,7 @@ DocsFocus is an open‑source Chrome Extension that helps developers (especially
 
 ## Capabilities (MVP, proposed via OpenSpec change)
 - `extension-shell` — MV3 shell, minimal permissions, structure
-- `adhd-mode` — global enable/disable; default OFF
+- `focus-mode` — global enable/disable; default OFF
 - `text-collapse` — configurable threshold; show more/less
 - `code-first` — TL;DR preview clone + jump link; configurable toggle
 - `keyword-highlighting` — prose and line‑level code highlighting; configurable list and toggle
