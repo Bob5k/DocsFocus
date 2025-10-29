@@ -15,7 +15,13 @@ const ui = {
   presetApply: null,
   saveButton: null,
   resetButton: null,
-  status: null
+  status: null,
+  presetName: null,
+  savePresetButton: null,
+  customPresetsList: null,
+  customPresetsItems: null,
+  visibilityDeepfocus: null,
+  visibilitySkim: null
 };
 
 let helpersModule = null;
@@ -40,11 +46,17 @@ async function initializeOptionsPage() {
   attachPresetListeners();
 
   const settings = await helpersModule.getSettings();
-  populateForm(settings);
+  await populateForm(settings);
+  await loadCustomPresets();
+  await loadPresetVisibility();
+  await updatePresetDropdown();
 
   ui.form.addEventListener('submit', handleSubmit);
   ui.resetButton?.addEventListener('click', handleReset);
   ui.presetApply?.addEventListener('click', handlePresetApply);
+  ui.savePresetButton?.addEventListener('click', handleSavePreset);
+  ui.visibilityDeepfocus?.addEventListener('change', handleVisibilityChange);
+  ui.visibilitySkim?.addEventListener('change', handleVisibilityChange);
 }
 
 function cacheDom() {
@@ -65,6 +77,12 @@ function cacheDom() {
   ui.saveButton = document.getElementById('save-button');
   ui.resetButton = document.getElementById('reset-button');
   ui.status = document.getElementById('save-status');
+  ui.presetName = document.getElementById('preset-name');
+  ui.savePresetButton = document.getElementById('save-preset-button');
+  ui.customPresetsList = document.getElementById('custom-presets-list');
+  ui.customPresetsItems = document.getElementById('custom-presets-items');
+  ui.visibilityDeepfocus = document.getElementById('visibility-deepfocus');
+  ui.visibilitySkim = document.getElementById('visibility-skim');
 }
 
 function populateForm(settings) {
@@ -103,7 +121,7 @@ function populateForm(settings) {
     ui.dyslexiaMode.checked = Boolean(normalized.dyslexiaMode);
   }
   if (ui.presetSelect) {
-    const presets = ['balanced', 'skim', 'focus'];
+    const presets = ['deepfocus', 'skim'];
     ui.presetSelect.value = presets.includes(normalized.preset) ? normalized.preset : 'custom';
   }
 }
@@ -161,7 +179,7 @@ function collectFormValues() {
   const keyboardShortcuts = Boolean(ui.keyboardShortcuts?.checked);
   const dyslexiaMode = Boolean(ui.dyslexiaMode?.checked);
   const presetSelection = ui.presetSelect?.value ?? 'custom';
-  const preset = ['balanced', 'skim', 'focus'].includes(presetSelection) ? presetSelection : 'custom';
+  const preset = ['deepfocus', 'skim'].includes(presetSelection) ? presetSelection : 'custom';
 
   return {
     collapseThreshold: thresholdValue,
@@ -221,7 +239,7 @@ function attachPresetListeners() {
   ].forEach((control) => control?.addEventListener('change', markCustom));
 }
 
-function handlePresetApply() {
+async function handlePresetApply() {
   if (!helpersModule || !ui.presetSelect) {
     return;
   }
@@ -230,17 +248,13 @@ function handlePresetApply() {
     return;
   }
 
-  const applied = helpersModule.applyPresetSettings
-    ? helpersModule.applyPresetSettings(preset, helpersModule.DEFAULT_SETTINGS)
-    : helpersModule.normalizeSettings({
-        ...helpersModule.DEFAULT_SETTINGS,
-        ...(helpersModule.SETTINGS_PRESETS?.[preset] ?? {})
-      });
-
-  populateForm(applied);
+  const applied = await helpersModule.applyPresetSettings(preset, helpersModule.DEFAULT_SETTINGS);
+  await populateForm(applied);
   if (ui.presetSelect) {
-    const available = ['balanced', 'skim', 'focus'];
-    ui.presetSelect.value = available.includes(applied.preset) ? applied.preset : preset;
+    const available = ['deepfocus', 'skim'];
+    const customPresets = await helpersModule.getCustomPresets();
+    const allAvailable = [...available, ...Object.keys(customPresets)];
+    ui.presetSelect.value = allAvailable.includes(applied.preset) ? applied.preset : preset;
   }
 }
 
@@ -286,4 +300,183 @@ function sendMessageToTab(tabId, message) {
       }
     });
   });
+}
+
+async function loadCustomPresets() {
+  if (!helpersModule || !ui.customPresetsItems) {
+    return;
+  }
+  
+  const customPresets = await helpersModule.getCustomPresets();
+  const presetNames = Object.keys(customPresets);
+  
+  if (presetNames.length === 0) {
+    if (ui.customPresetsList) {
+      ui.customPresetsList.hidden = true;
+    }
+    return;
+  }
+  
+  if (ui.customPresetsList) {
+    ui.customPresetsList.hidden = false;
+  }
+  
+  ui.customPresetsItems.innerHTML = '';
+  
+  presetNames.forEach((name) => {
+    const li = document.createElement('li');
+    li.className = 'options__preset-item';
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'options__preset-name';
+    nameSpan.textContent = name;
+    
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'options__button options__button--small options__button--danger';
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.addEventListener('click', () => handleDeletePreset(name));
+    
+    li.appendChild(nameSpan);
+    li.appendChild(deleteBtn);
+    ui.customPresetsItems.appendChild(li);
+  });
+}
+
+async function loadPresetVisibility() {
+  if (!helpersModule) {
+    return;
+  }
+  
+  const visibility = await helpersModule.getPresetVisibility();
+  
+  if (ui.visibilityDeepfocus) {
+    ui.visibilityDeepfocus.checked = visibility.deepfocus !== false;
+  }
+  if (ui.visibilitySkim) {
+    ui.visibilitySkim.checked = visibility.skim !== false;
+  }
+}
+
+async function updatePresetDropdown() {
+  if (!helpersModule || !ui.presetSelect) {
+    return;
+  }
+  
+  const [customPresets, visibility] = await Promise.all([
+    helpersModule.getCustomPresets(),
+    helpersModule.getPresetVisibility()
+  ]);
+  
+  const currentValue = ui.presetSelect.value;
+  
+  // Clear existing options except custom
+  ui.presetSelect.innerHTML = '';
+  
+  // Add visible built-in presets
+  if (visibility.deepfocus !== false) {
+    const option = document.createElement('option');
+    option.value = 'deepfocus';
+    option.textContent = 'Deep Focus (default)';
+    ui.presetSelect.appendChild(option);
+  }
+  
+  if (visibility.skim !== false) {
+    const option = document.createElement('option');
+    option.value = 'skim';
+    option.textContent = 'Skim (fast scan)';
+    ui.presetSelect.appendChild(option);
+  }
+  
+  // Add custom presets
+  Object.keys(customPresets).forEach((name) => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    ui.presetSelect.appendChild(option);
+  });
+  
+  // Always add "Custom" option
+  const customOption = document.createElement('option');
+  customOption.value = 'custom';
+  customOption.textContent = 'Custom';
+  ui.presetSelect.appendChild(customOption);
+  
+  // Restore selection if still valid
+  const allValues = Array.from(ui.presetSelect.options).map(opt => opt.value);
+  if (allValues.includes(currentValue)) {
+    ui.presetSelect.value = currentValue;
+  } else {
+    ui.presetSelect.value = 'custom';
+  }
+}
+
+async function handleSavePreset() {
+  if (!helpersModule || !ui.presetName) {
+    return;
+  }
+  
+  const name = ui.presetName.value.trim();
+  if (!name) {
+    showStatus('Please enter a preset name.', true);
+    return;
+  }
+  
+  const currentSettings = collectFormValues();
+  
+  try {
+    await helpersModule.saveCustomPreset(name, currentSettings);
+    ui.presetName.value = '';
+    await loadCustomPresets();
+    await updatePresetDropdown();
+    showStatus(`Preset "${name}" saved successfully.`);
+  } catch (error) {
+    console.error('[DocsFocus] Failed to save preset:', error);
+    showStatus(error.message || 'Failed to save preset.', true);
+  }
+}
+
+async function handleDeletePreset(name) {
+  if (!helpersModule) {
+    return;
+  }
+  
+  if (!confirm(`Delete preset "${name}"?`)) {
+    return;
+  }
+  
+  try {
+    await helpersModule.deleteCustomPreset(name);
+    await loadCustomPresets();
+    await updatePresetDropdown();
+    
+    // If deleted preset was active, revert to deepfocus
+    const currentSettings = await helpersModule.getSettings();
+    if (currentSettings.preset === name) {
+      const defaults = await helpersModule.applyPresetSettings('deepfocus', helpersModule.DEFAULT_SETTINGS);
+      await helpersModule.setSettings(defaults);
+      await populateForm(defaults);
+    }
+    
+    showStatus(`Preset "${name}" deleted.`);
+  } catch (error) {
+    console.error('[DocsFocus] Failed to delete preset:', error);
+    showStatus('Failed to delete preset.', true);
+  }
+}
+
+async function handleVisibilityChange() {
+  if (!helpersModule || !ui.visibilityDeepfocus || !ui.visibilitySkim) {
+    return;
+  }
+  
+  try {
+    await helpersModule.setPresetVisibility('deepfocus', ui.visibilityDeepfocus.checked);
+    await helpersModule.setPresetVisibility('skim', ui.visibilitySkim.checked);
+    await updatePresetDropdown();
+    showStatus('Preset visibility updated.');
+  } catch (error) {
+    console.error('[DocsFocus] Failed to update visibility:', error);
+    showStatus('Failed to update visibility.', true);
+  }
 }

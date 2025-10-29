@@ -270,18 +270,23 @@ function updateSiteControls() {
 
   if (popupState.sitePresetSelect) {
     if (!state?.domain) {
-      popupState.sitePresetSelect.value = 'global';
       popupState.sitePresetSelect.disabled = true;
     } else {
       popupState.sitePresetSelect.disabled = false;
-      if (state.domainSettings) {
-        const presetValue = state.domainSettings.preset && state.domainSettings.preset !== 'custom'
-          ? state.domainSettings.preset
-          : 'custom';
-        popupState.sitePresetSelect.value = presetValue;
-      } else {
-        popupState.sitePresetSelect.value = 'global';
-      }
+      
+      // Populate with available presets
+      updateSitePresetDropdown().then(() => {
+        if (state.domainSettings) {
+          const presetValue = state.domainSettings.preset && state.domainSettings.preset !== 'custom'
+            ? state.domainSettings.preset
+            : 'custom';
+          popupState.sitePresetSelect.value = presetValue;
+        } else {
+          // No domain settings means using global
+          const globalPreset = state.globalSettings?.preset ?? 'deepfocus';
+          popupState.sitePresetSelect.value = globalPreset;
+        }
+      });
     }
   }
 
@@ -450,7 +455,7 @@ function handleStorageChanges(changes, areaName) {
     } else {
       const fallbackGlobal = popupState.contentState.globalSettings ?? popupState.helpers.DEFAULT_SETTINGS;
       popupState.contentState.settings = fallbackGlobal;
-      popupState.contentState.domainPreset = fallbackGlobal.preset ?? 'balanced';
+      popupState.contentState.domainPreset = fallbackGlobal.preset ?? 'deepfocus';
     }
     needsRender = true;
     needsControls = true;
@@ -579,11 +584,6 @@ async function handleSitePresetApply() {
   const selected = popupState.sitePresetSelect.value;
   console.log(`[DocsFocus] Applying preset "${selected}" for domain "${domain}"`);
 
-  if (selected === 'global') {
-    popupState.sitePresetSelect.value = 'global';
-    await handleSitePresetClear();
-    return;
-  }
   if (selected === 'custom') {
     console.log('[DocsFocus] Opening options page for custom settings');
     if (chrome.runtime?.openOptionsPage) {
@@ -661,7 +661,8 @@ async function handleSitePresetClear() {
     popupState.sitePresetClear.disabled = true;
   }
   if (popupState.sitePresetSelect) {
-    popupState.sitePresetSelect.value = 'global';
+    await updateSitePresetDropdown();
+    popupState.sitePresetSelect.value = popupState.contentState?.globalSettings?.preset ?? 'deepfocus';
   }
 
   try {
@@ -685,11 +686,11 @@ async function handleSitePresetClear() {
       popupState.contentState = refreshed;
       console.log('[DocsFocus] State refreshed from content script');
     } else {
-      popupState.contentState = {
-        ...popupState.contentState,
-        domainSettings: null,
-        domainPreset: popupState.contentState?.globalSettings?.preset ?? 'balanced'
-      };
+    popupState.contentState = {
+      ...popupState.contentState,
+      domainSettings: null,
+      domainPreset: popupState.contentState?.globalSettings?.preset ?? 'deepfocus'
+    };
       console.log('[DocsFocus] State updated locally');
     }
   } catch (error) {
@@ -700,5 +701,56 @@ async function handleSitePresetClear() {
     }
     updateSiteControls();
     renderStatus();
+  }
+}
+
+async function updateSitePresetDropdown() {
+  if (!popupState.helpers || !popupState.sitePresetSelect) {
+    return;
+  }
+  
+  const [customPresets, visibility] = await Promise.all([
+    popupState.helpers.getCustomPresets(),
+    popupState.helpers.getPresetVisibility()
+  ]);
+  
+  const currentValue = popupState.sitePresetSelect.value;
+  
+  // Clear existing options
+  popupState.sitePresetSelect.innerHTML = '';
+  
+  // Add visible built-in presets
+  if (visibility.deepfocus !== false) {
+    const option = document.createElement('option');
+    option.value = 'deepfocus';
+    option.textContent = 'Deep Focus';
+    popupState.sitePresetSelect.appendChild(option);
+  }
+  
+  if (visibility.skim !== false) {
+    const option = document.createElement('option');
+    option.value = 'skim';
+    option.textContent = 'Skim (fast scan)';
+    popupState.sitePresetSelect.appendChild(option);
+  }
+  
+  // Add custom presets
+  Object.keys(customPresets).forEach((name) => {
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    popupState.sitePresetSelect.appendChild(option);
+  });
+  
+  // Always add "Custom" option
+  const customOption = document.createElement('option');
+  customOption.value = 'custom';
+  customOption.textContent = 'Custom';
+  popupState.sitePresetSelect.appendChild(customOption);
+  
+  // Restore selection if still valid
+  const allValues = Array.from(popupState.sitePresetSelect.options).map(opt => opt.value);
+  if (allValues.includes(currentValue)) {
+    popupState.sitePresetSelect.value = currentValue;
   }
 }

@@ -2,7 +2,9 @@ export const STORAGE_KEYS = {
   ADHD_MODE: 'docsfocusAdhdMode',
   SETTINGS: 'docsfocusSettings',
   MANUAL_OVERRIDES: 'docsfocusManualOverrides',
-  DOMAIN_SETTINGS: 'docsfocusDomainSettings'
+  DOMAIN_SETTINGS: 'docsfocusDomainSettings',
+  CUSTOM_PRESETS: 'docsfocusCustomPresets',
+  PRESET_VISIBILITY: 'docsfocusPresetVisibility'
 };
 
 export const MESSAGE_TYPES = {
@@ -40,37 +42,37 @@ export const DEFAULT_KEYWORDS = [
 ];
 
 export const DEFAULT_SETTINGS = {
-  collapseThreshold: 350,
+  collapseThreshold: 340,
   keywords: DEFAULT_KEYWORDS,
   highlightInCode: true,
   previewTlDr: true,
   readingMask: true,
   collapsibleSections: true,
-  trimChrome: false,
+  trimChrome: true,
   sectionTracker: true,
   keyboardShortcuts: true,
-  dyslexiaMode: false,
+  dyslexiaMode: true,
   collapseCodeParagraphs: true,
-  preset: 'balanced'
+  preset: 'deepfocus'
 };
 
 export const SETTINGS_PRESETS = {
-  balanced: {
-    collapseThreshold: 350,
+  deepfocus: {
+    collapseThreshold: 340,
     readingMask: true,
-    trimChrome: false,
+    trimChrome: true,
     previewTlDr: true,
     sectionTracker: true,
     keyboardShortcuts: true,
     collapsibleSections: true,
-    dyslexiaMode: false,
+    dyslexiaMode: true,
     collapseCodeParagraphs: true,
     readingMaskConfig: {
       enabled: true,
-      focusHeightRatio: 0.32,
-      minFocusHeight: 160,
-      maxFocusHeight: 360,
-      defaultPositionRatio: 0.33
+      focusHeightRatio: 0.35,
+      minFocusHeight: 150,
+      maxFocusHeight: 340,
+      defaultPositionRatio: 0.35
     }
   },
   skim: {
@@ -85,24 +87,6 @@ export const SETTINGS_PRESETS = {
     collapseCodeParagraphs: true,
     readingMaskConfig: {
       enabled: false
-    }
-  },
-  focus: {
-    collapseThreshold: 340,
-    readingMask: true,
-    trimChrome: true,
-    previewTlDr: true,
-    sectionTracker: true,
-    keyboardShortcuts: true,
-    collapsibleSections: true,
-    dyslexiaMode: true,
-    collapseCodeParagraphs: false,
-    readingMaskConfig: {
-      enabled: true,
-      focusHeightRatio: 0.28,
-      minFocusHeight: 140,
-      maxFocusHeight: 320,
-      defaultPositionRatio: 0.35
     }
   }
 };
@@ -347,7 +331,13 @@ export function normalizeSettings(settings) {
   merged.keyboardShortcuts = Boolean(merged.keyboardShortcuts);
   merged.dyslexiaMode = Boolean(merged.dyslexiaMode);
   merged.collapseCodeParagraphs = Boolean(merged.collapseCodeParagraphs);
-  const desiredPreset = typeof merged.preset === 'string' ? merged.preset : DEFAULT_SETTINGS.preset;
+  
+  // Handle legacy preset names
+  let desiredPreset = typeof merged.preset === 'string' ? merged.preset : DEFAULT_SETTINGS.preset;
+  if (desiredPreset === 'balanced' || desiredPreset === 'focus') {
+    desiredPreset = 'deepfocus';
+  }
+  
   const presetMatch = settingsMatchPreset(merged, desiredPreset) ? desiredPreset : findMatchingPreset(merged);
   merged.preset = presetMatch;
 
@@ -430,16 +420,30 @@ export function mergeSettings(baseSettings = DEFAULT_SETTINGS, overrides = {}) {
   });
 }
 
-export function applyPresetSettings(presetName, baseSettings = DEFAULT_SETTINGS) {
-  const preset = SETTINGS_PRESETS[presetName];
-  if (!preset) {
-    return normalizeSettings(baseSettings);
+export async function applyPresetSettings(presetName, baseSettings = DEFAULT_SETTINGS) {
+  // Check built-in presets first
+  const builtInPreset = SETTINGS_PRESETS[presetName];
+  if (builtInPreset) {
+    return normalizeSettings({
+      ...baseSettings,
+      ...builtInPreset,
+      preset: presetName
+    });
   }
-  return normalizeSettings({
-    ...baseSettings,
-    ...preset,
-    preset: presetName
-  });
+  
+  // Check custom presets
+  const customPresets = await getCustomPresets();
+  const customPreset = customPresets[presetName];
+  if (customPreset) {
+    return normalizeSettings({
+      ...baseSettings,
+      ...customPreset,
+      preset: presetName
+    });
+  }
+  
+  // Fallback to base settings
+  return normalizeSettings(baseSettings);
 }
 
 export function settingsMatchPreset(settings, presetName) {
@@ -615,4 +619,129 @@ export function createElement(tag, options = {}) {
     });
   }
   return el;
+}
+
+// Custom Preset Management
+export async function getCustomPresets() {
+  const result = await withFallback((area) => storageGet(area, [STORAGE_KEYS.CUSTOM_PRESETS])).catch(() => ({}));
+  const presets = result?.[STORAGE_KEYS.CUSTOM_PRESETS];
+  if (presets && typeof presets === 'object') {
+    return presets;
+  }
+  return {};
+}
+
+export async function saveCustomPreset(name, settings) {
+  if (!name || typeof name !== 'string') {
+    throw new Error('Preset name is required');
+  }
+  
+  const trimmedName = name.trim();
+  if (!trimmedName) {
+    throw new Error('Preset name cannot be empty');
+  }
+  
+  // Check for reserved names
+  const reservedNames = ['deepfocus', 'skim', 'custom'];
+  if (reservedNames.includes(trimmedName.toLowerCase())) {
+    throw new Error(`"${trimmedName}" is a reserved preset name`);
+  }
+  
+  const customPresets = await getCustomPresets();
+  
+  // Check for duplicate names (case-insensitive)
+  const existingNames = Object.keys(customPresets).map(n => n.toLowerCase());
+  if (existingNames.includes(trimmedName.toLowerCase()) && !customPresets[trimmedName]) {
+    throw new Error('A preset with this name already exists');
+  }
+  
+  const normalized = normalizeSettings(settings);
+  const presetData = {
+    ...normalized,
+    preset: trimmedName,
+    timestamp: Date.now()
+  };
+  
+  const updated = {
+    ...customPresets,
+    [trimmedName]: presetData
+  };
+  
+  await withFallback((area) => storageSet(area, { [STORAGE_KEYS.CUSTOM_PRESETS]: updated }));
+  return presetData;
+}
+
+export async function deleteCustomPreset(name) {
+  if (!name) {
+    return getCustomPresets();
+  }
+  
+  const customPresets = await getCustomPresets();
+  const updated = { ...customPresets };
+  delete updated[name];
+  
+  await withFallback((area) => storageSet(area, { [STORAGE_KEYS.CUSTOM_PRESETS]: updated }));
+  return updated;
+}
+
+export async function getPresetVisibility() {
+  const result = await withFallback((area) => storageGet(area, [STORAGE_KEYS.PRESET_VISIBILITY])).catch(() => ({}));
+  const visibility = result?.[STORAGE_KEYS.PRESET_VISIBILITY];
+  
+  // Default: all built-in presets are visible
+  const defaults = {
+    deepfocus: true,
+    skim: true
+  };
+  
+  if (visibility && typeof visibility === 'object') {
+    return { ...defaults, ...visibility };
+  }
+  return defaults;
+}
+
+export async function setPresetVisibility(presetName, visible) {
+  if (!presetName) {
+    throw new Error('Preset name is required');
+  }
+  
+  const current = await getPresetVisibility();
+  const updated = {
+    ...current,
+    [presetName]: Boolean(visible)
+  };
+  
+  await withFallback((area) => storageSet(area, { [STORAGE_KEYS.PRESET_VISIBILITY]: updated }));
+  return updated;
+}
+
+export async function getAllAvailablePresets() {
+  const [customPresets, visibility] = await Promise.all([
+    getCustomPresets(),
+    getPresetVisibility()
+  ]);
+  
+  const available = [];
+  
+  // Add visible built-in presets
+  Object.keys(SETTINGS_PRESETS).forEach((name) => {
+    if (visibility[name] !== false) {
+      available.push({
+        name,
+        builtin: true,
+        settings: SETTINGS_PRESETS[name]
+      });
+    }
+  });
+  
+  // Add all custom presets
+  Object.entries(customPresets).forEach(([name, settings]) => {
+    available.push({
+      name,
+      builtin: false,
+      settings
+    });
+  });
+  
+  return available;
 }

@@ -16,12 +16,11 @@
           <div class="options__field">
             <label id="preset-label" for="preset-select" class="options__label">Reading preset</label>
             <select id="preset-select" name="preset" class="options__select">
-              <option value="balanced">Balanced (default)</option>
+              <option value="deepfocus">Deep Focus (default)</option>
               <option value="skim">Skim (fast scan)</option>
-              <option value="focus">Focus</option>
               <option value="custom">Custom</option>
             </select>
-            <p class="options__hint">Presets adjust multiple focus helpers at once. You can fine-tune values below.</p>
+            <p class="options__hint">Presets adjust multiple focus helpers at once. You can fine-tune values below or save your own.</p>
           </div>
           <div class="options__actions options__actions--inline">
             <button type="button" class="options__button" id="preset-apply">Apply preset</button>
@@ -99,6 +98,43 @@
             <input type="checkbox" id="dyslexia-mode" name="dyslexiaMode" />
             <span class="switch__control" aria-hidden="true"></span>
             <span class="switch__text">Use dyslexia-friendly typography</span>
+          </label>
+        </section>
+
+        <section class="options__section" aria-labelledby="custom-presets-label">
+          <h2 class="options__section-title" id="custom-presets-label">Custom Presets</h2>
+          <div class="options__field">
+            <label for="preset-name" class="options__label">Save current settings as preset</label>
+            <div class="options__inline-group">
+              <input
+                id="preset-name"
+                type="text"
+                placeholder="My Custom Preset"
+                class="options__input"
+                maxlength="50"
+              />
+              <button type="button" class="options__button" id="save-preset-button">Save preset</button>
+            </div>
+            <p class="options__hint">Create reusable presets with your preferred settings.</p>
+          </div>
+          <div id="custom-presets-list" class="options__preset-list" hidden>
+            <h3 class="options__subsection-title">Your Saved Presets</h3>
+            <ul id="custom-presets-items" class="options__preset-items"></ul>
+          </div>
+        </section>
+
+        <section class="options__section" aria-labelledby="preset-visibility-label">
+          <h2 class="options__section-title" id="preset-visibility-label">Preset Visibility</h2>
+          <p class="options__hint">Hide presets you don't use to simplify your choices.</p>
+          <label class="switch">
+            <input type="checkbox" id="visibility-deepfocus" checked />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Show Deep Focus preset</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="visibility-skim" checked />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Show Skim preset</span>
           </label>
         </section>
 
