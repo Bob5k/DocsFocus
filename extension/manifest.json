@@ -40,9 +40,7 @@
     "https://kotlinlang.org/docs/*",
     "https://doc.qt.io/*",
     "https://laravel.com/docs/*",
-    "https://ruby-doc.org/*",
-    "*://*/docs/*",
-    "*://api.*/*"
+    "https://ruby-doc.org/*"
   ],
   "optional_host_permissions": [
     "*://*/*"
@@ -66,13 +64,23 @@
         "https://kotlinlang.org/docs/*",
         "https://doc.qt.io/*",
         "https://laravel.com/docs/*",
-        "https://ruby-doc.org/*",
-        "*://*/docs/*",
-        "*://api.*/*"
+        "https://ruby-doc.org/*"
       ],
       "js": ["content/content.js"],
       "css": ["content/styles.css"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "utils/helpers.js",
+        "content/features/index.js",
+        "content/features/text-collapse.js",
+        "content/features/code-preview.js",
+        "content/features/keyword-highlighting.js"
+      ],
+      "matches": ["<all_urls>"]
     }
   ],
   "options_page": "options/options.html"

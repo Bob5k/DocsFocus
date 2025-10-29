@@ -178,6 +178,16 @@ body {
   box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15);
 }
 
+.popup__button--outline {
+  background: transparent;
+  border-color: var(--popup-border);
+}
+
+.popup__button--outline:hover {
+  box-shadow: none;
+  background: rgba(37, 99, 235, 0.08);
+}
+
 .popup__footer {
   display: flex;
   justify-content: flex-end;

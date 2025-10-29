@@ -1,10 +1,12 @@
 const popupState = {
   tabId: null,
+  tabUrl: null,
   contentState: null,
   helpers: null,
   siteSection: null,
   siteStatusText: null,
-  siteButton: null
+  siteButton: null,
+  idleEnableButton: null
 };
 
 document.addEventListener('DOMContentLoaded', initializePopup);
@@ -22,6 +24,7 @@ async function initializePopup() {
   popupState.siteSection = document.getElementById('site-section');
   popupState.siteStatusText = document.getElementById('site-status-text');
   popupState.siteButton = document.getElementById('site-toggle');
+  popupState.idleEnableButton = document.getElementById('idle-enable');
 
   if (!toggle || !statusText) {
     console.warn('[DocsFocus] Popup markup missing expected elements.');
@@ -32,22 +35,17 @@ async function initializePopup() {
     popupState.siteButton.addEventListener('click', handleSiteButtonClick);
   }
 
-  popupState.tabId = await resolveActiveTabId();
+  if (popupState.idleEnableButton) {
+    popupState.idleEnableButton.addEventListener('click', handleIdleEnableClick);
+  }
+
+  const activeTab = await resolveActiveTab();
+  popupState.tabId = activeTab.id;
+  popupState.tabUrl = activeTab.url;
   popupState.contentState = await requestContentState(popupState.tabId);
 
   if (!popupState.contentState) {
-    // Fallback to stored ADHD mode state when content script not reachable.
-    const fallbackAdhd = await popupState.helpers.getAdhdMode();
-    popupState.contentState = {
-      adhdMode: fallbackAdhd,
-      settings: popupState.helpers.DEFAULT_SETTINGS,
-      siteEligible: false,
-      featuresActive: false,
-      domain: null,
-      url: null,
-      manualOverrides: {},
-      autoDetected: false
-    };
+    popupState.contentState = await buildFallbackState();
   }
 
   toggle.checked = Boolean(popupState.contentState.adhdMode);
@@ -94,15 +92,39 @@ function renderStatus() {
     return;
   }
 
-  const { adhdMode, siteEligible, featuresActive, manualOverrides, domain, autoDetected } = popupState.contentState;
-  const overrideEntry = domain ? manualOverrides?.[domain] : null;
+  if (popupState.idleEnableButton) {
+    popupState.idleEnableButton.hidden = true;
+    popupState.idleEnableButton.disabled = false;
+  }
+
+  const {
+    adhdMode,
+    siteEligible,
+    featuresActive,
+    manualOverrides: storedOverrides,
+    domain,
+    autoDetected
+  } = popupState.contentState;
+  const manualOverrides = storedOverrides && typeof storedOverrides === 'object' ? storedOverrides : {};
+
+  const canDeriveFromUrl =
+    popupState.tabUrl &&
+    popupState.tabUrl.startsWith('http') &&
+    popupState.helpers?.getDomainFromUrl;
+  const derivedDomain = domain || (canDeriveFromUrl ? popupState.helpers.getDomainFromUrl(popupState.tabUrl) : null);
+  const overrideEntry = derivedDomain ? manualOverrides?.[derivedDomain] : null;
   const overrideDisabled = overrideEntry?.enabled === false;
+  const canOfferManualEnable =
+    Boolean(derivedDomain) && (!popupState.tabUrl || popupState.tabUrl.startsWith('http'));
 
   if (!siteEligible) {
     if (overrideDisabled || autoDetected) {
       statusText.textContent = 'DocsFocus is disabled for this domain.';
     } else {
       statusText.textContent = 'DocsFocus is idle: page not detected as documentation.';
+      if (popupState.idleEnableButton && canOfferManualEnable) {
+        popupState.idleEnableButton.hidden = false;
+      }
     }
     return;
   }
@@ -166,16 +188,20 @@ function updateSiteControls() {
   popupState.siteButton.disabled = false;
 }
 
-async function resolveActiveTabId() {
+async function resolveActiveTab() {
   try {
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs && tabs.length > 0) {
-      return tabs[0].id ?? null;
+      const tab = tabs[0];
+      return {
+        id: tab.id ?? null,
+        url: tab.url ?? null
+      };
     }
   } catch (error) {
     console.warn('[DocsFocus] Unable to resolve active tab:', error);
   }
-  return null;
+  return { id: null, url: null };
 }
 
 async function requestContentState(tabId) {
@@ -186,11 +212,49 @@ async function requestContentState(tabId) {
     const response = await sendMessageToTab(tabId, {
       type: popupState.helpers.MESSAGE_TYPES.GET_STATE
     });
+    if (response?.state?.url && !popupState.tabUrl) {
+      popupState.tabUrl = response.state.url;
+    }
     return response?.state ?? null;
   } catch (error) {
     console.warn('[DocsFocus] Content script unreachable for state request:', error);
     return null;
   }
+}
+
+async function buildFallbackState(providedOverrides) {
+  const overridesSource =
+    providedOverrides && typeof providedOverrides === 'object'
+      ? Promise.resolve(providedOverrides)
+      : popupState.helpers.getManualOverrides();
+  const [fallbackAdhd, overrides] = await Promise.all([
+    popupState.helpers.getAdhdMode(),
+    overridesSource
+  ]);
+
+  const manualOverrides = overrides && typeof overrides === 'object' ? overrides : {};
+  const canDeriveFromUrl =
+    popupState.tabUrl &&
+    popupState.tabUrl.startsWith('http') &&
+    popupState.helpers.getDomainFromUrl;
+  const domainFromUrl = canDeriveFromUrl ? popupState.helpers.getDomainFromUrl(popupState.tabUrl) : null;
+  const autoDetected =
+    popupState.tabUrl && popupState.tabUrl.startsWith('http') && popupState.helpers.matchesDocsPattern
+      ? popupState.helpers.matchesDocsPattern(popupState.tabUrl)
+      : false;
+  const overrideEntry = domainFromUrl ? manualOverrides[domainFromUrl] : null;
+  const siteEligible = autoDetected || overrideEntry?.enabled === true;
+
+  return {
+    adhdMode: fallbackAdhd,
+    settings: popupState.helpers.DEFAULT_SETTINGS,
+    siteEligible,
+    featuresActive: false,
+    domain: domainFromUrl ?? null,
+    url: popupState.tabUrl ?? null,
+    manualOverrides,
+    autoDetected
+  };
 }
 
 function handleStorageChanges(changes, areaName) {
@@ -212,8 +276,15 @@ function handleStorageChanges(changes, areaName) {
 
   if (Object.prototype.hasOwnProperty.call(changes, popupState.helpers.STORAGE_KEYS.MANUAL_OVERRIDES)) {
     const nextOverrides = changes[popupState.helpers.STORAGE_KEYS.MANUAL_OVERRIDES]?.newValue;
-    popupState.contentState.manualOverrides = nextOverrides && typeof nextOverrides === 'object' ? nextOverrides : {};
+    const manualOverrides = nextOverrides && typeof nextOverrides === 'object' ? nextOverrides : {};
+    popupState.contentState.manualOverrides = manualOverrides;
+    if (popupState.contentState.domain) {
+      const entry = manualOverrides[popupState.contentState.domain];
+      const enabled = entry?.enabled === true;
+      popupState.contentState.siteEligible = popupState.contentState.autoDetected || enabled;
+    }
     updateSiteControls();
+    renderStatus();
   }
 }
 
@@ -253,25 +324,61 @@ async function handleSiteButtonClick() {
   }
 
   try {
-    const response = await chrome.runtime.sendMessage({
-      type: popupState.helpers.MESSAGE_TYPES.MANUAL_OVERRIDE,
-      payload: {
-        domain,
-        enabled: desired,
-        tabId: popupState.tabId
-      }
-    });
-
-    if (response?.ok && response.state) {
-      popupState.contentState = response.state;
-    } else {
-      popupState.contentState = await requestContentState(popupState.tabId);
-    }
+    await applyManualOverride(domain, desired);
   } catch (error) {
     console.error('[DocsFocus] Failed to update manual override:', error);
   } finally {
     popupState.siteButton.disabled = false;
     renderStatus();
     updateSiteControls();
+  }
+}
+
+async function handleIdleEnableClick() {
+  if (!popupState.helpers) {
+    return;
+  }
+  const primaryDomain = popupState.contentState?.domain;
+  const canUseTabUrl = popupState.tabUrl && popupState.tabUrl.startsWith('http') && popupState.helpers.getDomainFromUrl;
+  const fallbackDomain = canUseTabUrl ? popupState.helpers.getDomainFromUrl(popupState.tabUrl) : null;
+  const domain = primaryDomain || fallbackDomain;
+  if (!domain || !popupState.idleEnableButton) {
+    return;
+  }
+
+  popupState.idleEnableButton.disabled = true;
+
+  try {
+    await applyManualOverride(domain, true);
+  } catch (error) {
+    console.error('[DocsFocus] Failed to manually enable DocsFocus:', error);
+  } finally {
+    popupState.idleEnableButton.disabled = false;
+    renderStatus();
+    updateSiteControls();
+  }
+}
+
+async function applyManualOverride(domain, desired) {
+  const payload = {
+    type: popupState.helpers.MESSAGE_TYPES.MANUAL_OVERRIDE,
+    payload: {
+      domain,
+      enabled: desired,
+      tabId: popupState.tabId
+    }
+  };
+
+  const response = await chrome.runtime.sendMessage(payload);
+  if (response?.ok) {
+    if (response.state) {
+      popupState.contentState = response.state;
+      popupState.tabUrl = response.state.url ?? popupState.tabUrl;
+    } else {
+      popupState.contentState = await buildFallbackState(response.overrides);
+    }
+  } else {
+    // On failure attempt to refresh from content script/fallback to keep UI in sync.
+    popupState.contentState = (await requestContentState(popupState.tabId)) ?? (await buildFallbackState());
   }
 }
