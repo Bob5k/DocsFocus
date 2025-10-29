@@ -7,6 +7,7 @@ const SKIP_PARENTS_SELECTOR = 'nav, header, footer, aside, code, pre, figure, ta
 
 export function createTextCollapseFeature({ document, helpers }) {
   let threshold = helpers.DEFAULT_SETTINGS.collapseThreshold;
+  let collapseCodeParagraphs = helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
   const collapsedMap = new Map();
   let observer = null;
   let active = false;
@@ -14,6 +15,7 @@ export function createTextCollapseFeature({ document, helpers }) {
 
   function activate(settings) {
     threshold = settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
+    collapseCodeParagraphs = settings.collapseCodeParagraphs ?? helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
     active = true;
     scanDocument();
     ensureObserver();
@@ -21,8 +23,10 @@ export function createTextCollapseFeature({ document, helpers }) {
 
   function update(settings) {
     const nextThreshold = settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
-    if (nextThreshold !== threshold) {
+    const nextCollapseCodeParagraphs = settings.collapseCodeParagraphs ?? helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
+    if (nextThreshold !== threshold || nextCollapseCodeParagraphs !== collapseCodeParagraphs) {
       threshold = nextThreshold;
+      collapseCodeParagraphs = nextCollapseCodeParagraphs;
       refreshAll();
     } else {
       scanDocument();
@@ -111,9 +115,18 @@ export function createTextCollapseFeature({ document, helpers }) {
     if (paragraph.closest(SKIP_PARENTS_SELECTOR)) {
       return false;
     }
-    if (paragraph.querySelector('code, pre')) {
+
+    // Always exclude paragraphs with <pre> elements (full code blocks)
+    if (paragraph.querySelector('pre')) {
       return false;
     }
+
+    // Check for inline code elements
+    const hasInlineCode = paragraph.querySelector('code:not(pre code)');
+    if (hasInlineCode && !collapseCodeParagraphs) {
+      return false;
+    }
+
     const text = paragraph.textContent?.trim().replace(/\s+/g, ' ') ?? '';
     if (text.length < threshold) {
       return false;

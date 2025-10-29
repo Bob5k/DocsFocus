@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS = {
   sectionTracker: true,
   keyboardShortcuts: true,
   dyslexiaMode: false,
+  collapseCodeParagraphs: true,
   preset: 'balanced'
 };
 
@@ -63,6 +64,7 @@ export const SETTINGS_PRESETS = {
     keyboardShortcuts: true,
     collapsibleSections: true,
     dyslexiaMode: false,
+    collapseCodeParagraphs: true,
     readingMaskConfig: {
       enabled: true,
       focusHeightRatio: 0.32,
@@ -80,6 +82,7 @@ export const SETTINGS_PRESETS = {
     keyboardShortcuts: true,
     collapsibleSections: true,
     dyslexiaMode: false,
+    collapseCodeParagraphs: true,
     readingMaskConfig: {
       enabled: false
     }
@@ -93,30 +96,13 @@ export const SETTINGS_PRESETS = {
     keyboardShortcuts: true,
     collapsibleSections: true,
     dyslexiaMode: true,
+    collapseCodeParagraphs: false,
     readingMaskConfig: {
       enabled: true,
       focusHeightRatio: 0.28,
       minFocusHeight: 140,
       maxFocusHeight: 320,
       defaultPositionRatio: 0.35
-    }
-  },
-  deep: {
-    collapseThreshold: 520,
-    readingMask: true,
-    trimChrome: false,
-    previewTlDr: true,
-    highlightInCode: true,
-    sectionTracker: true,
-    keyboardShortcuts: true,
-    collapsibleSections: true,
-    dyslexiaMode: true,
-    readingMaskConfig: {
-      enabled: true,
-      focusHeightRatio: 0.40,
-      minFocusHeight: 200,
-      maxFocusHeight: 440,
-      defaultPositionRatio: 0.30
     }
   }
 };
@@ -130,7 +116,8 @@ const PRESET_COMPARISON_KEYS = [
   'trimChrome',
   'sectionTracker',
   'keyboardShortcuts',
-  'dyslexiaMode'
+  'dyslexiaMode',
+  'collapseCodeParagraphs'
 ];
 
 export const DOCS_PATTERNS = [
@@ -359,6 +346,7 @@ export function normalizeSettings(settings) {
   merged.sectionTracker = Boolean(merged.sectionTracker);
   merged.keyboardShortcuts = Boolean(merged.keyboardShortcuts);
   merged.dyslexiaMode = Boolean(merged.dyslexiaMode);
+  merged.collapseCodeParagraphs = Boolean(merged.collapseCodeParagraphs);
   const desiredPreset = typeof merged.preset === 'string' ? merged.preset : DEFAULT_SETTINGS.preset;
   const presetMatch = settingsMatchPreset(merged, desiredPreset) ? desiredPreset : findMatchingPreset(merged);
   merged.preset = presetMatch;

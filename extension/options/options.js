@@ -3,6 +3,7 @@ const ui = {
   threshold: null,
   keywords: null,
   highlightInCode: null,
+  collapseCodeParagraphs: null,
   previewTlDr: null,
   readingMask: null,
   collapsibleSections: null,
@@ -51,6 +52,7 @@ function cacheDom() {
   ui.threshold = document.getElementById('collapse-threshold');
   ui.keywords = document.getElementById('keywords');
   ui.highlightInCode = document.getElementById('highlight-in-code');
+  ui.collapseCodeParagraphs = document.getElementById('collapse-code-paragraphs');
   ui.previewTlDr = document.getElementById('preview-tldr');
   ui.readingMask = document.getElementById('reading-mask');
   ui.collapsibleSections = document.getElementById('collapsible-sections');
@@ -76,6 +78,9 @@ function populateForm(settings) {
   if (ui.highlightInCode) {
     ui.highlightInCode.checked = Boolean(normalized.highlightInCode);
   }
+  if (ui.collapseCodeParagraphs) {
+    ui.collapseCodeParagraphs.checked = Boolean(normalized.collapseCodeParagraphs);
+  }
   if (ui.previewTlDr) {
     ui.previewTlDr.checked = Boolean(normalized.previewTlDr);
   }
@@ -98,7 +103,7 @@ function populateForm(settings) {
     ui.dyslexiaMode.checked = Boolean(normalized.dyslexiaMode);
   }
   if (ui.presetSelect) {
-    const presets = ['balanced', 'skim', 'focus', 'deep'];
+    const presets = ['balanced', 'skim', 'focus'];
     ui.presetSelect.value = presets.includes(normalized.preset) ? normalized.preset : 'custom';
   }
 }
@@ -147,6 +152,7 @@ function collectFormValues() {
   const thresholdValue = Number(ui.threshold?.value ?? helpersModule.DEFAULT_SETTINGS.collapseThreshold);
   const keywordsValue = parseKeywords(ui.keywords?.value ?? '');
   const highlightInCode = Boolean(ui.highlightInCode?.checked);
+  const collapseCodeParagraphs = Boolean(ui.collapseCodeParagraphs?.checked);
   const previewTlDr = Boolean(ui.previewTlDr?.checked);
   const readingMask = Boolean(ui.readingMask?.checked);
   const collapsibleSections = Boolean(ui.collapsibleSections?.checked);
@@ -155,12 +161,13 @@ function collectFormValues() {
   const keyboardShortcuts = Boolean(ui.keyboardShortcuts?.checked);
   const dyslexiaMode = Boolean(ui.dyslexiaMode?.checked);
   const presetSelection = ui.presetSelect?.value ?? 'custom';
-  const preset = ['balanced', 'skim', 'focus', 'deep'].includes(presetSelection) ? presetSelection : 'custom';
+  const preset = ['balanced', 'skim', 'focus'].includes(presetSelection) ? presetSelection : 'custom';
 
   return {
     collapseThreshold: thresholdValue,
     keywords: keywordsValue,
     highlightInCode,
+    collapseCodeParagraphs,
     previewTlDr,
     readingMask,
     collapsibleSections,
@@ -203,6 +210,7 @@ function attachPresetListeners() {
 
   [
     ui.highlightInCode,
+    ui.collapseCodeParagraphs,
     ui.previewTlDr,
     ui.readingMask,
     ui.collapsibleSections,
@@ -231,7 +239,7 @@ function handlePresetApply() {
 
   populateForm(applied);
   if (ui.presetSelect) {
-    const available = ['balanced', 'skim', 'focus', 'deep'];
+    const available = ['balanced', 'skim', 'focus'];
     ui.presetSelect.value = available.includes(applied.preset) ? applied.preset : preset;
   }
 }

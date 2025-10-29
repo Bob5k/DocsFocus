@@ -19,7 +19,6 @@
               <option value="balanced">Balanced (default)</option>
               <option value="skim">Skim (fast scan)</option>
               <option value="focus">Focus</option>
-              <option value="deep">Deep dive</option>
               <option value="custom">Custom</option>
             </select>
             <p class="options__hint">Presets adjust multiple focus helpers at once. You can fine-tune values below.</p>
@@ -60,6 +59,11 @@
             <input type="checkbox" id="highlight-in-code" name="highlightInCode" />
             <span class="switch__control" aria-hidden="true"></span>
             <span class="switch__text">Highlight keywords inside code blocks</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="collapse-code-paragraphs" name="collapseCodeParagraphs" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Collapse paragraphs containing inline code</span>
           </label>
           <label class="switch">
             <input type="checkbox" id="preview-tldr" name="previewTlDr" />
