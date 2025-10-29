@@ -6,7 +6,6 @@ const popupState = {
   siteSection: null,
   siteStatusText: null,
   siteButton: null,
-  idleEnableButton: null,
   diagnosticText: null,
   sitePresetSelect: null,
   sitePresetApply: null,
@@ -18,8 +17,15 @@ document.addEventListener('DOMContentLoaded', initializePopup);
 async function initializePopup() {
   try {
     popupState.helpers = await import(chrome.runtime.getURL('utils/helpers.js'));
+    console.log('[DocsFocus] Helpers module loaded successfully');
   } catch (error) {
     console.error('[DocsFocus] Failed to load helpers in popup:', error);
+    // Show error message to user in status text
+    const statusText = document.getElementById('status-text');
+    if (statusText) {
+      statusText.textContent = 'Error: Extension failed to load properly.';
+      statusText.style.color = '#d73a49';
+    }
     return;
   }
 
@@ -28,7 +34,6 @@ async function initializePopup() {
   popupState.siteSection = document.getElementById('site-section');
   popupState.siteStatusText = document.getElementById('site-status-text');
   popupState.siteButton = document.getElementById('site-toggle');
-  popupState.idleEnableButton = document.getElementById('idle-enable');
   popupState.diagnosticText = document.getElementById('diagnostic-text');
   popupState.sitePresetSelect = document.getElementById('site-preset');
   popupState.sitePresetApply = document.getElementById('site-preset-apply');
@@ -43,19 +48,23 @@ async function initializePopup() {
     popupState.siteButton.addEventListener('click', handleSiteButtonClick);
   }
 
-  if (popupState.idleEnableButton) {
-    popupState.idleEnableButton.addEventListener('click', handleIdleEnableClick);
-  }
-
   popupState.sitePresetApply?.addEventListener('click', handleSitePresetApply);
   popupState.sitePresetClear?.addEventListener('click', handleSitePresetClear);
 
   const activeTab = await resolveActiveTab();
   popupState.tabId = activeTab.id;
   popupState.tabUrl = activeTab.url;
-  popupState.contentState = await requestContentState(popupState.tabId);
+  console.log(`[DocsFocus] Active tab resolved: ${popupState.tabId}, URL: ${popupState.tabUrl}`);
+
+  try {
+    popupState.contentState = await requestContentState(popupState.tabId);
+    console.log('[DocsFocus] Content state retrieved from tab');
+  } catch (error) {
+    console.warn('[DocsFocus] Failed to get content state from tab:', error);
+  }
 
   if (!popupState.contentState) {
+    console.log('[DocsFocus] Building fallback state');
     popupState.contentState = await buildFallbackState();
   }
 
@@ -65,15 +74,29 @@ async function initializePopup() {
 
   toggle.addEventListener('change', async (event) => {
     const enabled = Boolean(event.target.checked);
+    console.log(`[DocsFocus] ADHD Mode toggle changed to: ${enabled}`);
     toggle.disabled = true;
     try {
       await popupState.helpers.setAdhdMode(enabled);
+      console.log('[DocsFocus] ADHD Mode setting saved');
+
       if (popupState.tabId != null) {
-        await sendMessageToTab(popupState.tabId, {
-          type: popupState.helpers.MESSAGE_TYPES.TOGGLE_ADHD,
-          payload: { enabled }
-        });
-        popupState.contentState = await requestContentState(popupState.tabId);
+        try {
+          await sendMessageToTab(popupState.tabId, {
+            type: popupState.helpers.MESSAGE_TYPES.TOGGLE_ADHD,
+            payload: { enabled }
+          });
+          console.log('[DocsFocus] Toggle message sent to content script');
+          popupState.contentState = await requestContentState(popupState.tabId);
+        } catch (error) {
+          console.warn('[DocsFocus] Could not communicate with content script:', error);
+          // Still update local state even if content script communication fails
+          popupState.contentState = {
+            ...popupState.contentState,
+            adhdMode: enabled,
+            featuresActive: enabled && popupState.contentState.siteEligible
+          };
+        }
       } else {
         popupState.contentState = {
           ...popupState.contentState,
@@ -84,6 +107,11 @@ async function initializePopup() {
     } catch (error) {
       console.error('[DocsFocus] Failed to toggle ADHD Mode:', error);
       event.target.checked = !enabled; // revert on failure
+      const statusText = document.getElementById('status-text');
+      if (statusText) {
+        statusText.textContent = `Error: Failed to ${enabled ? 'enable' : 'disable'} ADHD Mode`;
+        setTimeout(() => renderStatus(), 3000);
+      }
     } finally {
       toggle.disabled = false;
       renderStatus();
@@ -103,11 +131,7 @@ function renderStatus() {
     return;
   }
 
-  if (popupState.idleEnableButton) {
-    popupState.idleEnableButton.hidden = true;
-    popupState.idleEnableButton.disabled = false;
-  }
-
+  
   const diagnostic = popupState.diagnosticText;
   if (diagnostic) {
     diagnostic.hidden = true;
@@ -156,14 +180,9 @@ function renderStatus() {
       statusText.textContent = 'DocsFocus is disabled for this domain.';
     } else {
       statusText.textContent = 'DocsFocus is idle: page not detected as documentation.';
-      if (popupState.idleEnableButton && canOfferManualEnable) {
-        popupState.idleEnableButton.hidden = false;
-      }
     }
-    if (!eligibilityMessage && !overrideDisabled) {
-      diagnosticLines.push('DocsFocus could not confirm this page as documentation.');
-    }
-    if (diagnosticLines.length && domainHasOverride) {
+    // Show preset info only if domain has overrides
+    if (domainHasOverride) {
       diagnosticLines.push(presetDisplay);
     }
     if (diagnostic && diagnosticLines.length) {
@@ -189,9 +208,7 @@ function renderStatus() {
     ? 'DocsFocus is active on this page.'
     : 'DocsFocus is preparing enhancements…';
 
-  if (eligibilitySource === 'manual-allow') {
-    diagnosticLines.push('Manually enabled for this domain.');
-  } else if (autoDetectedInfo?.label) {
+  if (autoDetectedInfo?.label) {
     diagnosticLines.push(autoDetectedInfo.label);
   }
 
@@ -226,21 +243,21 @@ function updateSiteControls() {
 
   if (autoDetected) {
     if (overrideDisabled) {
-      hint = 'DocsFocus is disabled for this domain. Re-enable to restore automatic enhancements.';
+      hint = 'Previously disabled. Re-enable to restore automatic enhancements.';
       action = 'clear';
       label = 'Re-enable on this domain';
     } else {
-      hint = 'DocsFocus recognizes this documentation site automatically.';
+      hint = 'This site is automatically recognized as documentation.';
       action = 'disable';
       label = 'Disable on this domain';
     }
   } else {
     if (overrideEnabled) {
-      hint = 'DocsFocus is manually enabled for this domain.';
+      hint = 'This site is manually enabled for DocsFocus.';
       action = 'clear';
       label = 'Disable manual enable';
     } else {
-      hint = 'Enable DocsFocus manually if you want focus helpers on this site.';
+      hint = 'Enable DocsFocus manually for this non-documentation site.';
       action = 'enable';
       label = 'Enable on this domain';
     }
@@ -524,30 +541,6 @@ async function handleSiteButtonClick() {
   }
 }
 
-async function handleIdleEnableClick() {
-  if (!popupState.helpers) {
-    return;
-  }
-  const primaryDomain = popupState.contentState?.domain;
-  const canUseTabUrl = popupState.tabUrl && popupState.tabUrl.startsWith('http') && popupState.helpers.getDomainFromUrl;
-  const fallbackDomain = canUseTabUrl ? popupState.helpers.getDomainFromUrl(popupState.tabUrl) : null;
-  const domain = primaryDomain || fallbackDomain;
-  if (!domain || !popupState.idleEnableButton) {
-    return;
-  }
-
-  popupState.idleEnableButton.disabled = true;
-
-  try {
-    await applyManualOverride(domain, true);
-  } catch (error) {
-    console.error('[DocsFocus] Failed to manually enable DocsFocus:', error);
-  } finally {
-    popupState.idleEnableButton.disabled = false;
-    renderStatus();
-    updateSiteControls();
-  }
-}
 
 async function applyManualOverride(domain, desired) {
   const payload = {
@@ -575,19 +568,24 @@ async function applyManualOverride(domain, desired) {
 
 async function handleSitePresetApply() {
   if (!popupState.helpers || !popupState.sitePresetSelect) {
+    console.warn('[DocsFocus] Preset apply: helpers or select element missing');
     return;
   }
   const domain = popupState.contentState?.domain;
   if (!domain) {
+    console.warn('[DocsFocus] Preset apply: no domain available');
     return;
   }
   const selected = popupState.sitePresetSelect.value;
+  console.log(`[DocsFocus] Applying preset "${selected}" for domain "${domain}"`);
+
   if (selected === 'global') {
     popupState.sitePresetSelect.value = 'global';
     await handleSitePresetClear();
     return;
   }
   if (selected === 'custom') {
+    console.log('[DocsFocus] Opening options page for custom settings');
     if (chrome.runtime?.openOptionsPage) {
       chrome.runtime.openOptionsPage();
     }
@@ -604,9 +602,12 @@ async function handleSitePresetApply() {
           ...(popupState.helpers.SETTINGS_PRESETS?.[selected] ?? {})
         });
 
+    console.log('[DocsFocus] Preset settings calculated:', presetSettings);
     await popupState.helpers.setDomainSettings(domain, presetSettings);
+    console.log('[DocsFocus] Domain settings saved successfully');
 
     if (!popupState.contentState?.siteEligible) {
+      console.log('[DocsFocus] Site not eligible, applying manual override');
       await applyManualOverride(domain, true);
     }
 
@@ -616,20 +617,23 @@ async function handleSitePresetApply() {
           type: popupState.helpers.MESSAGE_TYPES.DOMAIN_SETTINGS,
           payload: { domain, settings: presetSettings }
         });
+        console.log('[DocsFocus] Settings sent to content script');
       } catch (error) {
-        console.debug('[DocsFocus] Unable to push domain settings message:', error);
+        console.warn('[DocsFocus] Unable to push domain settings message:', error);
       }
     }
 
     const refreshed = await requestContentState(popupState.tabId);
     if (refreshed) {
       popupState.contentState = refreshed;
+      console.log('[DocsFocus] State refreshed from content script');
     } else {
       popupState.contentState = {
         ...popupState.contentState,
         domainSettings: presetSettings,
         domainPreset: presetSettings.preset ?? selected
       };
+      console.log('[DocsFocus] State updated locally');
     }
   } catch (error) {
     console.error('[DocsFocus] Failed to apply site preset:', error);
@@ -642,12 +646,16 @@ async function handleSitePresetApply() {
 
 async function handleSitePresetClear() {
   if (!popupState.helpers) {
+    console.warn('[DocsFocus] Preset clear: helpers missing');
     return;
   }
   const domain = popupState.contentState?.domain;
   if (!domain) {
+    console.warn('[DocsFocus] Preset clear: no domain available');
     return;
   }
+
+  console.log(`[DocsFocus] Clearing preset for domain "${domain}"`);
 
   if (popupState.sitePresetClear) {
     popupState.sitePresetClear.disabled = true;
@@ -658,6 +666,7 @@ async function handleSitePresetClear() {
 
   try {
     await popupState.helpers.clearDomainSettings(domain);
+    console.log('[DocsFocus] Domain settings cleared successfully');
 
     if (popupState.tabId != null) {
       try {
@@ -665,20 +674,23 @@ async function handleSitePresetClear() {
           type: popupState.helpers.MESSAGE_TYPES.DOMAIN_SETTINGS,
           payload: { domain, clear: true }
         });
+        console.log('[DocsFocus] Clear notification sent to content script');
       } catch (error) {
-        console.debug('[DocsFocus] Unable to notify content script about domain clear:', error);
+        console.warn('[DocsFocus] Unable to notify content script about domain clear:', error);
       }
     }
 
     const refreshed = await requestContentState(popupState.tabId);
     if (refreshed) {
       popupState.contentState = refreshed;
+      console.log('[DocsFocus] State refreshed from content script');
     } else {
       popupState.contentState = {
         ...popupState.contentState,
         domainSettings: null,
         domainPreset: popupState.contentState?.globalSettings?.preset ?? 'balanced'
       };
+      console.log('[DocsFocus] State updated locally');
     }
   } catch (error) {
     console.error('[DocsFocus] Failed to clear domain settings:', error);
