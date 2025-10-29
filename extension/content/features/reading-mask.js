@@ -1,8 +1,14 @@
 const MASK_CLASS = 'docsfocus-reading-mask';
 const MASK_SEGMENT_CLASS = 'docsfocus-reading-mask__segment';
 const MASK_FOCUS_CLASS = 'docsfocus-reading-mask__focus';
-const MIN_FOCUS_HEIGHT = 160;
-const MAX_FOCUS_HEIGHT = 360;
+
+// Default fallback values
+const DEFAULT_CONFIG = {
+  focusHeightRatio: 0.32,
+  minFocusHeight: 160,
+  maxFocusHeight: 360,
+  defaultPositionRatio: 0.33
+};
 
 export function createReadingMaskFeature({ document }) {
   let enabled = true;
@@ -13,6 +19,7 @@ export function createReadingMaskFeature({ document }) {
   let rafId = null;
   let pointerY = null;
   let active = false;
+  let currentConfig = DEFAULT_CONFIG;
 
   const handleScroll = () => scheduleUpdate();
   const handleResize = () => scheduleUpdate(true);
@@ -28,11 +35,21 @@ export function createReadingMaskFeature({ document }) {
   };
 
   function activate(settings) {
-    enabled = Boolean(settings.readingMask);
-    if (!enabled) {
+    // Check if reading mask is enabled for the current preset
+    const presetEnabled = settings.readingMaskConfig?.enabled !== false && Boolean(settings.readingMask);
+
+    if (!presetEnabled) {
       deactivate();
       return;
     }
+
+    // Update configuration based on preset
+    currentConfig = {
+      ...DEFAULT_CONFIG,
+      ...(settings.readingMaskConfig || {})
+    };
+
+    enabled = true;
     if (!overlay) {
       buildOverlay();
     }
@@ -122,8 +139,13 @@ export function createReadingMaskFeature({ document }) {
       return;
     }
 
-    const focusHeight = clamp(Math.round(viewportHeight * 0.32), MIN_FOCUS_HEIGHT, MAX_FOCUS_HEIGHT);
-    const defaultCenter = viewportHeight * 0.33;
+    // Use preset-specific configuration
+    const focusHeight = clamp(
+      Math.round(viewportHeight * currentConfig.focusHeightRatio),
+      currentConfig.minFocusHeight,
+      currentConfig.maxFocusHeight
+    );
+    const defaultCenter = viewportHeight * currentConfig.defaultPositionRatio;
     const centerY = pointerY == null ? defaultCenter : pointerY;
     const focusTop = clamp(centerY - focusHeight / 2, 0, Math.max(viewportHeight - focusHeight, 0));
     const focusBottom = Math.max(viewportHeight - (focusTop + focusHeight), 0);

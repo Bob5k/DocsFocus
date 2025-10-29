@@ -62,7 +62,14 @@ export const SETTINGS_PRESETS = {
     sectionTracker: true,
     keyboardShortcuts: true,
     collapsibleSections: true,
-    dyslexiaMode: false
+    dyslexiaMode: false,
+    readingMaskConfig: {
+      enabled: true,
+      focusHeightRatio: 0.32,
+      minFocusHeight: 160,
+      maxFocusHeight: 360,
+      defaultPositionRatio: 0.33
+    }
   },
   skim: {
     collapseThreshold: 280,
@@ -72,7 +79,10 @@ export const SETTINGS_PRESETS = {
     sectionTracker: true,
     keyboardShortcuts: true,
     collapsibleSections: true,
-    dyslexiaMode: false
+    dyslexiaMode: false,
+    readingMaskConfig: {
+      enabled: false
+    }
   },
   focus: {
     collapseThreshold: 340,
@@ -82,7 +92,14 @@ export const SETTINGS_PRESETS = {
     sectionTracker: true,
     keyboardShortcuts: true,
     collapsibleSections: true,
-    dyslexiaMode: true
+    dyslexiaMode: true,
+    readingMaskConfig: {
+      enabled: true,
+      focusHeightRatio: 0.28,
+      minFocusHeight: 140,
+      maxFocusHeight: 320,
+      defaultPositionRatio: 0.35
+    }
   },
   deep: {
     collapseThreshold: 520,
@@ -93,7 +110,14 @@ export const SETTINGS_PRESETS = {
     sectionTracker: true,
     keyboardShortcuts: true,
     collapsibleSections: true,
-    dyslexiaMode: true
+    dyslexiaMode: true,
+    readingMaskConfig: {
+      enabled: true,
+      focusHeightRatio: 0.40,
+      minFocusHeight: 200,
+      maxFocusHeight: 440,
+      defaultPositionRatio: 0.30
+    }
   }
 };
 
