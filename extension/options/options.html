@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DocsFocus Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <main class="options" id="options-root">
+      <header class="options__header">
+        <h1 class="options__title">DocsFocus Settings</h1>
+        <p class="options__subtitle">Tune focus helpers to match your reading style.</p>
+      </header>
+      <form id="settings-form" class="options__form" autocomplete="off">
+        <section class="options__section" aria-labelledby="collapse-threshold-label">
+          <div class="options__field">
+            <label id="collapse-threshold-label" for="collapse-threshold" class="options__label">Collapse threshold (characters)</label>
+            <input
+              id="collapse-threshold"
+              name="collapseThreshold"
+              type="number"
+              inputmode="numeric"
+              min="120"
+              max="2000"
+              step="20"
+              required
+              class="options__input"
+            />
+            <p class="options__hint">Default 400. Paragraphs longer than this collapse with a Show more toggle.</p>
+          </div>
+        </section>
+
+        <section class="options__section" aria-labelledby="keywords-label">
+          <div class="options__field">
+            <label id="keywords-label" for="keywords" class="options__label">Keywords to highlight</label>
+            <textarea id="keywords" name="keywords" rows="6" class="options__textarea" spellcheck="false" aria-describedby="keywords-hint"></textarea>
+            <p class="options__hint" id="keywords-hint">One keyword per line or separated by commas. Keeps code terms easy to scan.</p>
+          </div>
+        </section>
+
+        <section class="options__section options__section--toggles" aria-label="Behavior toggles">
+          <label class="switch">
+            <input type="checkbox" id="highlight-in-code" name="highlightInCode" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Highlight keywords inside code blocks</span>
+          </label>
+          <label class="switch">
+            <input type="checkbox" id="preview-tldr" name="previewTlDr" />
+            <span class="switch__control" aria-hidden="true"></span>
+            <span class="switch__text">Show TL;DR code preview at section top</span>
+          </label>
+        </section>
+
+        <div class="options__actions">
+          <button type="submit" class="options__button options__button--primary" id="save-button">Save settings</button>
+          <button type="button" class="options__button" id="reset-button">Reset to defaults</button>
+        </div>
+
+        <p class="options__status" id="save-status" role="status" aria-live="polite"></p>
+      </form>
+    </main>
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

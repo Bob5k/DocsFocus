@@ -1,0 +1,11 @@
+{
+  "name": "docsfocus",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "npx @biomejs/biome@latest check extension openspec",
+    "format": "npx @biomejs/biome@latest format extension openspec --write=false",
+    "package": "node scripts/package-extension.js"
+  }
+}

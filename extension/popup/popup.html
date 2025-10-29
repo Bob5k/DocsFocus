@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DocsFocus</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup" id="popup-root">
+      <header class="popup__header">
+        <h1 class="popup__title">DocsFocus</h1>
+        <p class="popup__subtitle">Focus tools for documentation</p>
+      </header>
+      <section class="popup__section" aria-labelledby="adhd-toggle-label">
+        <div class="toggle" role="presentation">
+          <label class="toggle__label" id="adhd-toggle-label">
+            <span class="toggle__text">ADHD Mode</span>
+            <input type="checkbox" id="adhd-toggle" class="toggle__input" aria-describedby="status-text" />
+            <span class="toggle__slider" aria-hidden="true"></span>
+          </label>
+        </div>
+        <p id="status-text" class="popup__status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="popup__section" id="site-section" hidden>
+        <h2 class="popup__section-title" id="site-section-title">Site controls</h2>
+        <p class="popup__hint" id="site-status-text"></p>
+        <button id="site-toggle" class="popup__button" type="button"></button>
+      </section>
+      <footer class="popup__footer">
+        <a class="popup__link" href="https://github.com/" target="_blank" rel="noreferrer">Project Home</a>
+      </footer>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

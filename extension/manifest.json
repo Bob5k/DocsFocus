@@ -1,0 +1,79 @@
+{
+  "manifest_version": 3,
+  "name": "DocsFocus",
+  "description": "DocsFocus helps developers skim documentation faster by collapsing long text, highlighting keywords, and surfacing code examples.",
+  "version": "0.1.0",
+  "default_locale": "en",
+  "action": {
+    "default_title": "DocsFocus",
+    "default_popup": "popup/popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab",
+    "tabs"
+  ],
+  "host_permissions": [
+    "*://developer.mozilla.org/*",
+    "https://docs.github.com/*",
+    "https://www.npmjs.com/package/*",
+    "https://docs.python.org/*",
+    "https://doc.rust-lang.org/*",
+    "https://docs.rs/*",
+    "*://*.readthedocs.io/*",
+    "https://go.dev/*",
+    "https://pkg.go.dev/*",
+    "https://nodejs.org/api/*",
+    "https://docs.oracle.com/*",
+    "https://learn.microsoft.com/*",
+    "https://docs.djangoproject.com/*",
+    "https://kotlinlang.org/docs/*",
+    "https://doc.qt.io/*",
+    "https://laravel.com/docs/*",
+    "https://ruby-doc.org/*",
+    "*://*/docs/*",
+    "*://api.*/*"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://developer.mozilla.org/*",
+        "https://docs.github.com/*",
+        "https://www.npmjs.com/package/*",
+        "https://docs.python.org/*",
+        "https://doc.rust-lang.org/*",
+        "https://docs.rs/*",
+        "*://*.readthedocs.io/*",
+        "https://go.dev/*",
+        "https://pkg.go.dev/*",
+        "https://nodejs.org/api/*",
+        "https://docs.oracle.com/*",
+        "https://learn.microsoft.com/*",
+        "https://docs.djangoproject.com/*",
+        "https://kotlinlang.org/docs/*",
+        "https://doc.qt.io/*",
+        "https://laravel.com/docs/*",
+        "https://ruby-doc.org/*",
+        "*://*/docs/*",
+        "*://api.*/*"
+      ],
+      "js": ["content/content.js"],
+      "css": ["content/styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options/options.html"
+}
