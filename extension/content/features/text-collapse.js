@@ -1,233 +1,255 @@
-const COLLAPSE_WRAPPER_CLASS = 'docsfocus-collapse';
-const SUMMARY_CLASS = 'docsfocus-collapse__summary';
-const TOGGLE_CLASS = 'docsfocus-collapse__toggle';
-const CONTENT_CLASS = 'docsfocus-collapse__content';
-const DATA_KEY = 'docsfocusCollapseWrapper';
-const SKIP_PARENTS_SELECTOR = 'nav, header, footer, aside, code, pre, figure, table, blockquote, dl, ul, ol';
+const COLLAPSE_WRAPPER_CLASS = "docsfocus-collapse";
+const SUMMARY_CLASS = "docsfocus-collapse__summary";
+const TOGGLE_CLASS = "docsfocus-collapse__toggle";
+const CONTENT_CLASS = "docsfocus-collapse__content";
+const DATA_KEY = "docsfocusCollapseWrapper";
+const SKIP_PARENTS_SELECTOR =
+	"nav, header, footer, aside, code, pre, figure, table, blockquote, dl, ul, ol";
 
 export function createTextCollapseFeature({ document, helpers }) {
-  let threshold = helpers.DEFAULT_SETTINGS.collapseThreshold;
-  let collapseCodeParagraphs = helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
-  const collapsedMap = new Map();
-  let observer = null;
-  let active = false;
-  let idCounter = 0;
+	let threshold = helpers.DEFAULT_SETTINGS.collapseThreshold;
+	let collapseCodeParagraphs = helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
+	const collapsedMap = new Map();
+	let observer = null;
+	let active = false;
+	let idCounter = 0;
 
-  function activate(settings) {
-    threshold = settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
-    collapseCodeParagraphs = settings.collapseCodeParagraphs ?? helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
-    active = true;
-    scanDocument();
-    ensureObserver();
-  }
+	function activate(settings) {
+		threshold =
+			settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
+		collapseCodeParagraphs =
+			settings.collapseCodeParagraphs ??
+			helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
+		active = true;
+		scanDocument();
+		ensureObserver();
+	}
 
-  function update(settings) {
-    const nextThreshold = settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
-    const nextCollapseCodeParagraphs = settings.collapseCodeParagraphs ?? helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
-    if (nextThreshold !== threshold || nextCollapseCodeParagraphs !== collapseCodeParagraphs) {
-      threshold = nextThreshold;
-      collapseCodeParagraphs = nextCollapseCodeParagraphs;
-      refreshAll();
-    } else {
-      scanDocument();
-    }
-  }
+	function update(settings) {
+		const nextThreshold =
+			settings.collapseThreshold ?? helpers.DEFAULT_SETTINGS.collapseThreshold;
+		const nextCollapseCodeParagraphs =
+			settings.collapseCodeParagraphs ??
+			helpers.DEFAULT_SETTINGS.collapseCodeParagraphs;
+		if (
+			nextThreshold !== threshold ||
+			nextCollapseCodeParagraphs !== collapseCodeParagraphs
+		) {
+			threshold = nextThreshold;
+			collapseCodeParagraphs = nextCollapseCodeParagraphs;
+			refreshAll();
+		} else {
+			scanDocument();
+		}
+	}
 
-  function deactivate() {
-    active = false;
-    if (observer) {
-      observer.disconnect();
-      observer = null;
-    }
-    collapsedMap.forEach((entry) => restoreParagraph(entry));
-    collapsedMap.clear();
-  }
+	function deactivate() {
+		active = false;
+		if (observer) {
+			observer.disconnect();
+			observer = null;
+		}
+		for (const entry of collapsedMap.values()) {
+			restoreParagraph(entry);
+		}
+		collapsedMap.clear();
+	}
 
-  function refreshAll() {
-    collapsedMap.forEach((entry) => restoreParagraph(entry));
-    collapsedMap.clear();
-    scanDocument();
-  }
+	function refreshAll() {
+		for (const entry of collapsedMap.values()) {
+			restoreParagraph(entry);
+		}
+		collapsedMap.clear();
+		scanDocument();
+	}
 
-  function ensureObserver() {
-    if (observer) {
-      return;
-    }
-    observer = new MutationObserver((mutations) => {
-      if (!active) {
-        return;
-      }
-      let shouldRescan = false;
-      for (const mutation of mutations) {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.matches('p')) {
-                processParagraph(node);
-              }
-              node.querySelectorAll?.('p').forEach((paragraph) => processParagraph(paragraph));
-            }
-          });
-        }
-        if (mutation.type === 'characterData') {
-          const parent = mutation.target.parentElement;
-          if (parent && parent.closest(`.${COLLAPSE_WRAPPER_CLASS}`)) {
-            shouldRescan = true;
-          }
-        }
-      }
-      if (shouldRescan) {
-        refreshAll();
-      }
-    });
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true
-    });
-  }
+	function ensureObserver() {
+		if (observer) {
+			return;
+		}
+		observer = new MutationObserver((mutations) => {
+			if (!active) {
+				return;
+			}
+			let shouldRescan = false;
+			for (const mutation of mutations) {
+				if (mutation.type === "childList") {
+					mutation.addedNodes.forEach((node) => {
+						if (node.nodeType === Node.ELEMENT_NODE) {
+							if (node.matches("p")) {
+								processParagraph(node);
+							}
+							for (const paragraph of node.querySelectorAll?.("p") || []) {
+								processParagraph(paragraph);
+							}
+						}
+					});
+				}
+				if (mutation.type === "characterData") {
+					const parent = mutation.target.parentElement;
+					if (parent?.closest(`.${COLLAPSE_WRAPPER_CLASS}`)) {
+						shouldRescan = true;
+					}
+				}
+			}
+			if (shouldRescan) {
+				refreshAll();
+			}
+		});
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			characterData: true,
+		});
+	}
 
-  function scanDocument() {
-    if (!active) {
-      return;
-    }
-    const paragraphs = Array.from(document.querySelectorAll('p'));
-    paragraphs.forEach((paragraph) => processParagraph(paragraph));
-  }
+	function scanDocument() {
+		if (!active) {
+			return;
+		}
+		const paragraphs = Array.from(document.querySelectorAll("p"));
+		for (const paragraph of paragraphs) {
+			processParagraph(paragraph);
+		}
+	}
 
-  function processParagraph(paragraph) {
-    if (!active || paragraph.dataset.docsfocusCollapsed === 'true') {
-      return;
-    }
-    if (!shouldCollapse(paragraph)) {
-      return;
-    }
-    collapseParagraph(paragraph);
-  }
+	function processParagraph(paragraph) {
+		if (!active || paragraph.dataset.docsfocusCollapsed === "true") {
+			return;
+		}
+		if (!shouldCollapse(paragraph)) {
+			return;
+		}
+		collapseParagraph(paragraph);
+	}
 
-  function shouldCollapse(paragraph) {
-    if (!(paragraph instanceof HTMLElement)) {
-      return false;
-    }
-    if (paragraph.closest(`.${COLLAPSE_WRAPPER_CLASS}`)) {
-      return false;
-    }
-    if (paragraph.closest(SKIP_PARENTS_SELECTOR)) {
-      return false;
-    }
+	function shouldCollapse(paragraph) {
+		if (!(paragraph instanceof HTMLElement)) {
+			return false;
+		}
+		if (paragraph.closest(`.${COLLAPSE_WRAPPER_CLASS}`)) {
+			return false;
+		}
+		if (paragraph.closest(SKIP_PARENTS_SELECTOR)) {
+			return false;
+		}
 
-    // Always exclude paragraphs with <pre> elements (full code blocks)
-    if (paragraph.querySelector('pre')) {
-      return false;
-    }
+		// Always exclude paragraphs with <pre> elements (full code blocks)
+		if (paragraph.querySelector("pre")) {
+			return false;
+		}
 
-    // Check for inline code elements
-    const hasInlineCode = paragraph.querySelector('code:not(pre code)');
-    if (hasInlineCode && !collapseCodeParagraphs) {
-      return false;
-    }
+		// Check for inline code elements
+		const hasInlineCode = paragraph.querySelector("code:not(pre code)");
+		if (hasInlineCode && !collapseCodeParagraphs) {
+			return false;
+		}
 
-    const text = paragraph.textContent?.trim().replace(/\s+/g, ' ') ?? '';
-    if (text.length < threshold) {
-      return false;
-    }
-    return true;
-  }
+		const text = paragraph.textContent?.trim().replace(/\s+/g, " ") ?? "";
+		if (text.length < threshold) {
+			return false;
+		}
+		return true;
+	}
 
-  function collapseParagraph(paragraph) {
-    const originalParent = paragraph.parentElement;
-    if (!originalParent) {
-      return;
-    }
-    const summaryText = buildSummary(paragraph.textContent ?? '');
-    const wrapper = document.createElement('div');
-    wrapper.className = COLLAPSE_WRAPPER_CLASS;
-    wrapper.dataset.docsfocus = 'collapsed-paragraph';
-    const summary = document.createElement('p');
-    summary.className = SUMMARY_CLASS;
-    summary.textContent = summaryText;
+	function collapseParagraph(paragraph) {
+		const originalParent = paragraph.parentElement;
+		if (!originalParent) {
+			return;
+		}
+		const summaryText = buildSummary(paragraph.textContent ?? "");
+		const wrapper = document.createElement("div");
+		wrapper.className = COLLAPSE_WRAPPER_CLASS;
+		wrapper.dataset.docsfocus = "collapsed-paragraph";
+		const summary = document.createElement("p");
+		summary.className = SUMMARY_CLASS;
+		summary.textContent = summaryText;
 
-    const content = document.createElement('div');
-    content.className = CONTENT_CLASS;
-    content.hidden = true;
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = TOGGLE_CLASS;
-    toggle.textContent = 'Show more';
-    const contentId = `docsfocus-collapse-${++idCounter}`;
-    toggle.setAttribute('aria-expanded', 'false');
-    toggle.setAttribute('aria-controls', contentId);
-    toggle.setAttribute('aria-label', 'Expand collapsed paragraph');
-    content.id = contentId;
+		const content = document.createElement("div");
+		content.className = CONTENT_CLASS;
+		content.hidden = true;
+		const toggle = document.createElement("button");
+		toggle.type = "button";
+		toggle.className = TOGGLE_CLASS;
+		toggle.textContent = "Show more";
+		const contentId = `docsfocus-collapse-${++idCounter}`;
+		toggle.setAttribute("aria-expanded", "false");
+		toggle.setAttribute("aria-controls", contentId);
+		toggle.setAttribute("aria-label", "Expand collapsed paragraph");
+		content.id = contentId;
 
-    const nextSibling = paragraph.nextSibling;
-    content.appendChild(paragraph);
-    wrapper.append(summary, toggle, content);
-    originalParent.insertBefore(wrapper, nextSibling ?? null);
+		const nextSibling = paragraph.nextSibling;
+		content.appendChild(paragraph);
+		wrapper.append(summary, toggle, content);
+		originalParent.insertBefore(wrapper, nextSibling ?? null);
 
-    const entry = {
-      wrapper,
-      summary,
-      toggle,
-      content,
-      paragraph,
-      parent: originalParent,
-      nextSibling
-    };
+		const entry = {
+			wrapper,
+			summary,
+			toggle,
+			content,
+			paragraph,
+			parent: originalParent,
+			nextSibling,
+		};
 
-    paragraph[DATA_KEY] = wrapper;
-    paragraph.dataset.docsfocusCollapsed = 'true';
-    collapsedMap.set(wrapper, entry);
+		paragraph[DATA_KEY] = wrapper;
+		paragraph.dataset.docsfocusCollapsed = "true";
+		collapsedMap.set(wrapper, entry);
 
-    toggle.addEventListener('click', () => {
-      const expanded = toggle.getAttribute('aria-expanded') === 'true';
-      setExpanded(entry, !expanded);
-    });
-  }
+		toggle.addEventListener("click", () => {
+			const expanded = toggle.getAttribute("aria-expanded") === "true";
+			setExpanded(entry, !expanded);
+		});
+	}
 
-  function setExpanded(entry, expanded) {
-    entry.toggle.setAttribute('aria-expanded', String(expanded));
-    entry.toggle.textContent = expanded ? 'Show less' : 'Show more';
-    entry.toggle.setAttribute('aria-label', expanded ? 'Collapse paragraph' : 'Expand paragraph');
-    entry.summary.hidden = expanded;
-    entry.content.hidden = !expanded;
-  }
+	function setExpanded(entry, expanded) {
+		entry.toggle.setAttribute("aria-expanded", String(expanded));
+		entry.toggle.textContent = expanded ? "Show less" : "Show more";
+		entry.toggle.setAttribute(
+			"aria-label",
+			expanded ? "Collapse paragraph" : "Expand paragraph",
+		);
+		entry.summary.hidden = expanded;
+		entry.content.hidden = !expanded;
+	}
 
-  function restoreParagraph(entry) {
-    const { wrapper, paragraph, parent, nextSibling } = entry;
-    if (wrapper && wrapper.parentElement) {
-      wrapper.parentElement.replaceChild(paragraph, wrapper);
-    } else if (parent) {
-      parent.insertBefore(paragraph, nextSibling ?? null);
-    }
-    if (paragraph) {
-      delete paragraph[DATA_KEY];
-      delete paragraph.dataset.docsfocusCollapsed;
-    }
-  }
+	function restoreParagraph(entry) {
+		const { wrapper, paragraph, parent, nextSibling } = entry;
+		if (wrapper?.parentElement) {
+			wrapper.parentElement.replaceChild(paragraph, wrapper);
+		} else if (parent) {
+			parent.insertBefore(paragraph, nextSibling ?? null);
+		}
+		if (paragraph) {
+			delete paragraph[DATA_KEY];
+			delete paragraph.dataset.docsfocusCollapsed;
+		}
+	}
 
-  function buildSummary(text) {
-    const trimmed = text.trim().replace(/\s+/g, ' ');
-    if (!trimmed) {
-      return '';
-    }
-    // Always show a shorter preview for better collapsing behavior
-    const summaryLength = 120;
-    if (trimmed.length <= summaryLength) {
-      return `${trimmed} …`;
-    }
-    // Try to end at a word boundary
-    let summary = trimmed.slice(0, summaryLength);
-    const lastSpaceIndex = summary.lastIndexOf(' ');
-    if (lastSpaceIndex > summaryLength * 0.7) { // Only cut at word boundary if it's not too early
-      summary = summary.slice(0, lastSpaceIndex);
-    }
-    return `${summary.trim()} …`;
-  }
+	function buildSummary(text) {
+		const trimmed = text.trim().replace(/\s+/g, " ");
+		if (!trimmed) {
+			return "";
+		}
+		// Always show a shorter preview for better collapsing behavior
+		const summaryLength = 120;
+		if (trimmed.length <= summaryLength) {
+			return `${trimmed} …`;
+		}
+		// Try to end at a word boundary
+		let summary = trimmed.slice(0, summaryLength);
+		const lastSpaceIndex = summary.lastIndexOf(" ");
+		if (lastSpaceIndex > summaryLength * 0.7) {
+			// Only cut at word boundary if it's not too early
+			summary = summary.slice(0, lastSpaceIndex);
+		}
+		return `${summary.trim()} …`;
+	}
 
-  return {
-    activate,
-    update,
-    deactivate
-  };
+	return {
+		activate,
+		update,
+		deactivate,
+	};
 }

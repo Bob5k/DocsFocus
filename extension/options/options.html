@@ -101,6 +101,50 @@
           </label>
         </section>
 
+        <section class="options__section options__section--mask" aria-labelledby="reading-mask-settings">
+          <h2 class="options__section-title" id="reading-mask-settings">Reading Mask Tuning</h2>
+          <p class="options__hint options__hint--section">
+            Customize the focus window when the Custom preset is active.
+          </p>
+          <div class="options__field">
+            <label class="switch">
+              <input type="checkbox" id="reading-mask-enabled" name="readingMaskEnabled" />
+              <span class="switch__control" aria-hidden="true"></span>
+              <span class="switch__text">Show dimmed overlay outside the focus area</span>
+            </label>
+          </div>
+          <div class="options__field">
+            <label for="reading-mask-height" class="options__label">Focus window height</label>
+            <div class="options__range">
+              <input
+                type="range"
+                id="reading-mask-height"
+                min="20"
+                max="48"
+                step="1"
+                class="options__range-input"
+              />
+              <div class="options__range-value" id="reading-mask-height-value">32% of viewport</div>
+            </div>
+            <p class="options__hint">Higher values widen the clear strip you read within.</p>
+          </div>
+          <div class="options__field">
+            <label for="reading-mask-overlay" class="options__label">Overlay darkness</label>
+            <div class="options__range">
+              <input
+                type="range"
+                id="reading-mask-overlay"
+                min="20"
+                max="90"
+                step="1"
+                class="options__range-input"
+              />
+              <div class="options__range-value" id="reading-mask-overlay-value">62% darkness</div>
+            </div>
+            <p class="options__hint">Lower values lighten the surroundings, higher values dim them more.</p>
+          </div>
+        </section>
+
         <section class="options__section" aria-labelledby="custom-presets-label">
           <h2 class="options__section-title" id="custom-presets-label">Custom Presets</h2>
           <div class="options__field">
