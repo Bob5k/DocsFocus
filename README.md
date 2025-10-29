@@ -3,216 +3,158 @@
 [![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-green?logo=google-chrome)](https://github.com/Bob5k/DocsFocus)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**DocsFocus** is a specialized Chrome extension designed to help developers stay focused (especially when scanning dense documentation) read technical documentation faster and with less cognitive load. It transforms overwhelming documentation pages into focused, readable content without AI, telemetry, or external network requests.
+DocsFocus is a Chrome extension built to keep developers in flow while skimming dense technical documentation. It transforms busy pages into focused, readable layouts without AI services, telemetry, or external network calls — everything runs locally in the browser.
 
-## ✨ Key Features
+## ✨ Focus Helpers
 
-- 🎯 **Smart Text Collapse** - Automatically collapses long paragraphs with expandable summaries
-- 🔍 **TL;DR Code Preview** - Surfaces the first relevant code block at the top of sections
-- 🌟 **Keyword Highlighting** - Highlights technical terms for better scanning
-- 🎭 **Reading Mask** - Visual focus overlay that follows your cursor
-- 📐 **Layout Trimming** - Removes distracting UI elements
-- 🧭 **Navigation Aids** - Floating section tracker and keyboard shortcuts
-- ♿ **Accessibility First** - WCAG 2.1 AA compliant with full keyboard navigation
-- 🔒 **Privacy-Focused** - Zero external requests, all processing happens locally
+- 🎯 **Focus Mode on demand** – toggle DocsFocus per tab to collapse distractions while preserving context.
+- ✂️ **Adaptive text collapsing** – shorten long paragraphs above your threshold with accessible “Show more” controls.
+- 🔍 **TL;DR code preview** – surface the first relevant code block at the top of each section.
+- 🪄 **Keyword highlighting everywhere** – emphasize technical terms inline and inside code blocks.
+- 🎭 **Reading mask overlay** – dim the periphery and follow your cursor to maintain focus.
+- 🧼 **Trimmed chrome & layout cleanup** – hide sticky banners, sidebars, and other UI noise.
+- 🧭 **Section tracker & shortcuts** – floating “you are here” indicator plus keyboard shortcuts for quick control.
+- 🧩 **Per-site overrides & presets** – remember settings per domain, including custom presets you create.
+- 🔒 **Privacy-first** – no external requests, no telemetry, no data leaves the page.
 
-## 🎯 Presets - Tailored Reading Experiences
+## 🎯 Presets & Modes
 
-DocsFocus includes four carefully crafted presets for different reading scenarios:
+DocsFocus ships with two built-in presets and a flexible custom system so you can match any reading style.
 
-### 📖 **Balanced** (Default)
-Perfect for everyday documentation reading with moderate assistance.
+### 🧠 Deep Focus (default)
 
-- **Text Collapse**: 400 characters threshold
-- **Reading Mask**: Medium focus window (32% of viewport height)
-- **Layout**: Keeps all UI elements visible
-- **Best for**: General technical documentation, tutorials, reference materials
+- Collapse threshold: **340** characters
+- Reading mask enabled with a 35% viewport window
+- Trim Chrome, TL;DR preview, section tracker, keyboard shortcuts, and collapsible sections enabled
+- Dyslexia-friendly typography and code paragraph collapsing enabled
 
-### ⚡ **Skim**
-Designed for rapid scanning and finding specific information quickly.
+### ⚡ Skim (fast scan)
 
-- **Text Collapse**: Aggressive 280 characters threshold
-- **Reading Mask**: **Disabled** for maximum content visibility
-- **Layout**: Trims distracting sidebars and banners
-- **Best for**: Quick lookups, API references, finding specific syntax
+- Collapse threshold: **280** characters
+- Reading mask disabled for maximum visibility
+- Trim Chrome, TL;DR preview, section tracker, keyboard shortcuts, and collapsible sections enabled
+- Dyslexia mode disabled for lighter typography
 
-### 🎯 **Focus**
-Optimized for deep reading with enhanced readability features.
+### 🛠️ Custom presets
 
-- **Text Collapse**: Moderate 340 characters threshold
-- **Reading Mask**: Smaller focus window (28% of viewport)
-- **Layout**: Clean interface with trimmed distractions
-- **Dyslexia Mode**: Enhanced typography for easier reading
-- **Best for**: Learning new concepts, detailed tutorials, comprehensive guides
+- Save any configuration from the options page with a custom name (syncs via `chrome.storage.sync`)
+- Apply or delete custom presets from both the options UI and popup
+- Preset names are validated to avoid duplicates and reserved values
 
-### 🔬 **Deep**
-Maximum assistance for thorough comprehension and analysis.
-
-- **Text Collapse**: Generous 520 characters threshold
-- **Reading Mask**: Large focus window (40% of viewport)
-- **Layout**: Full content retention with enhanced features
-- **Dyslexia Mode**: Enhanced typography
-- **Code Highlighting**: Highlights programming keywords in code blocks
-- **Best for**: Complex documentation, language specifications, in-depth research
+- **Preset visibility controls** – hide built-in presets you do not use to keep dropdowns minimal.
+- **Domain-specific overrides** – apply any preset (built-in or custom) to the current site from the popup; clearing overrides reverts the site to your global preset.
 
 ## 🚀 Getting Started
 
 ### Installation
-1. **Chrome Web Store**: Install DocsFocus from the [Chrome Web Store](https://chrome.google.com/webstore)
-2. **Developer Mode**: Load unpacked from the [GitHub repository](https://github.com/Bob5k/DocsFocus)
 
-### Basic Usage
-1. Navigate to any supported documentation site
-2. Click the DocsFocus icon in your browser toolbar
-3. Toggle **Focus Mode** to enable features
-4. Select a preset that matches your reading goal
-5. Fine-tune settings in the options page if needed
+1. **Chrome Web Store**: Install DocsFocus from the [Chrome Web Store](https://chrome.google.com/webstore) (listing coming soon).
+2. **Developer Mode**:
+   - Clone or download this repository
+   - Open `chrome://extensions`, enable **Developer mode**
+   - Click **Load unpacked** and select the `extension/` directory
 
-## 🌐 Supported Sites
+### Using Focus Mode
 
-DocsFocus automatically detects and activates on 20+ major documentation platforms:
+1. Navigate to a supported documentation site (or enable DocsFocus manually)
+2. Click the DocsFocus toolbar icon
+3. Toggle **Focus Mode** to activate helpers
+4. Pick a preset or custom profile that matches your current task
+5. Fine-tune settings from the options page when you need deeper control
 
-### Official Documentation
-- **MDN Web Docs** (developer.mozilla.org)
-- **GitHub Docs** (docs.github.com)
-- **Microsoft Learn** (learn.microsoft.com)
-- **Node.js** (nodejs.org/api)
-- **Python** (docs.python.org)
-- **Go** (go.dev, pkg.go.dev)
-- **Rust** (doc.rust-lang.org, docs.rs)
-- **Kotlin** (kotlinlang.org/docs)
-- **Qt** (doc.qt.io)
+## 🌐 Site Detection & Manual Activation
 
-### Package Management
-- **npm** (npmjs.com/package)
-- **Ruby** (ruby-doc.org)
+DocsFocus auto-detects documentation experiences on 20+ popular domains, including:
 
-### Frameworks
-- **Laravel** (laravel.com/docs)
-- **Django** (docs.djangoproject.com)
+- **Official docs**: MDN, GitHub Docs, Microsoft Learn, Node.js, Python, Go, Rust, Oracle, Kotlin, Qt
+- **Package ecosystems**: npm, RubyDoc
+- **Framework guides**: Laravel, Django
+- **Aggregators**: Read the Docs
 
-### Community
-- **Read the Docs** (readthedocs.io)
+Detection combines URL patterns with DOM heuristics so the extension can follow you into nested documentation sections.
 
-### Manual Override
-If a site isn't automatically detected, you can manually enable DocsFocus for any domain using the popup interface.
+If a site is not detected automatically:
+
+1. Open the popup while on the site and use **Enable for this site** to grant host permissions.
+2. DocsFocus stores the override and immediately injects Focus Mode.
+3. Clear the override from the popup to remove permissions and return to the default behavior.
 
 ## ⚙️ Customization
 
-### Options Page
-Access detailed settings by right-clicking the DocsFocus icon and selecting "Options":
+Open the options page (right-click the icon → **Options**) to tune every helper:
 
-#### Text Settings
-- **Collapse Threshold**: Adjust paragraph length trigger (120-2000 characters)
-- **Keywords**: Customize highlighted technical terms
+- **Collapse threshold** and custom keyword list
+- Feature toggles: keyword highlighting (with code support), code paragraph collapsing, TL;DR preview, reading mask, collapsible sections, Trim Chrome, section tracker, keyboard shortcuts, dyslexia mode
+- **Reading mask tuning** when using custom presets: adjust mask height and darkness
+- **Custom preset management**: name, save, apply, and delete presets; manage visibility of built-ins
 
-#### Feature Toggles
-- **Reading Mask**: Enable/disable visual focus overlay
-- **Code Preview**: Show TL;DR code blocks at section tops
-- **Layout Trimming**: Hide distracting UI elements
-- **Dyslexia Mode**: Enhanced typography
-- **Section Tracker**: Floating navigation aid
-- **Keyboard Shortcuts**: Quick navigation controls
-
-#### Appearance
-- **Highlight in Code**: Apply keyword highlighting to code blocks
-- **Collapsible Sections**: Expand/collapse document sections
-
-### Domain-Specific Settings
-Configure different presets and settings for specific documentation sites:
-1. Navigate to the documentation site
-2. Open DocsFocus popup
-3. Select domain-specific settings
-4. Choose preset and customize options
-5. Settings persist for future visits
+All settings are stored locally and sync via Chrome when available.
 
 ## 🎮 Keyboard Shortcuts
 
-When DocsFocus is active:
+When Focus Mode is active:
 
-- **Alt + D**: Toggle Focus Mode on/off
-- **Alt + S**: Cycle through presets (Balanced → Skim → Focus → Deep)
-- **Alt + R**: Toggle reading mask
-- **Alt + C**: Toggle text collapse
-- **Alt + L**: Toggle layout trimming
-- **Escape**: Disable all features temporarily
+- `Shift + J`: Jump to the next section heading
+- `Shift + K`: Jump to the previous section heading
+- `Shift + C`: Scroll to the first code block on the page
+- `Shift + T`: Show or hide the floating section tracker
+
+Shortcuts respect focused form elements and can be disabled from the options page.
 
 ## 🔧 Development
 
-### Setup
 ```bash
-npm run lint        # Static analysis via Biome (fetches @biomejs/biome on demand)
-npm run package     # Zips the extension into dist/docsfocus.zip using the zip CLI
+npm run lint     # Static analysis with Biome across extension and specs
+npm run format   # Check formatting without writing changes
+npm run package  # Bundle the extension into dist/docsfocus.zip
 ```
 
-### Installation (Unpacked)
-1. Run `npm run package` (optional) or ensure the `extension/` folder is present
-2. Open `chrome://extensions` and enable **Developer mode**
-3. Click **Load unpacked** and select the `extension/` directory
-4. Pin the extension and use the popup toggle to activate Focus Mode on documentation pages
+- The extension is plain JavaScript/HTML/CSS; no bundler required.
+- `scripts/package-extension.js` zips the `extension/` directory for manual installation.
+- Manual regression scenarios live in `docs/manual-test-plan.md`.
 
-### Project Structure
-- `extension/` – Manifest, background worker, content script, popup/options UI, icons, and shared helpers
-- `openspec/` – Specification and approved change describing requirements
-- `docs/manual-test-plan.md` – Manual regression checklist covering target sites and accessibility
+## 🛡️ Privacy & Performance
 
-## 🛡️ Privacy & Security
-
-### Privacy First
-- **Zero external network requests** - all processing happens locally
-- **No telemetry or analytics** - no data collection or tracking
-- **Optional host permissions** - only requested when manually enabling sites
-- **Local storage only** - settings stored in browser storage
-
-### Performance
-- **Fast activation**: Under 150ms per page
-- **Memory efficient**: Clean feature lifecycle
-- **Smooth interactions**: RequestAnimationFrame-based updates
-- **Minimal overhead**: Optimized DOM operations
+- **No telemetry** – there is no analytics or tracking of any kind.
+- **Offline by design** – focus helpers run entirely in the content script; no network requests are issued.
+- **Permission minimization** – DocsFocus requests optional host permissions only when you enable a site manually.
+- **Lightweight** – optimized DOM operations target <150 ms activation per page with low memory overhead.
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+**DocsFocus isn’t activating:**
 
-**Extension not activating on documentation site:**
-1. Check if Focus Mode is enabled (toggle in popup)
-2. Verify site is supported or manually enable for the domain
-3. Refresh the page after changing settings
+1. Confirm Focus Mode is toggled on in the popup.
+2. Check whether the domain is in the supported list or enable it manually.
+3. Refresh the page after changing presets or overrides.
 
-**Reading mask not visible:**
-1. Ensure "Skim" preset isn't selected (it disables reading mask)
-2. Check that reading mask is enabled in settings
-3. Try switching to "Balanced", "Focus", or "Deep" preset
+**Reading mask is missing:**
 
-**Features not working after update:**
-1. Refresh the active documentation page
-2. Check Chrome console for any error messages
-3. Try disabling and re-enabling Focus Mode
+1. Ensure the current preset has the mask enabled (Skim disables it by design).
+2. Verify the reading mask toggle in settings or try a custom preset.
 
-### Debug Information
-Enable debug logging by:
-1. Open Chrome DevTools (F12)
-2. Go to Console tab
-3. Look for `[DocsFocus]` prefixed messages
-4. Check diagnostics information in popup
+**Preset changes aren’t sticking:**
+
+1. Save settings in the options page after adjusting controls.
+2. When using custom presets, reapply the preset from the popup or options page.
+3. Clear site overrides if a domain-specific preset overrides your global choice.
+
+Check Chrome DevTools for `[DocsFocus]` logs to inspect active settings.
 
 ## 📄 License
 
-MIT License – see `LICENSE` (to be added) or use your preferred OSS license before releasing.
+MIT License – see `LICENSE`.
 
 ## 🙏 Acknowledgments
 
-- Built for developers seeking extra focus support and the broader neurodivergent community
-- Inspired by the challenges of reading dense technical documentation
-- Privacy-focused approach respecting user autonomy
-- Accessibility standards ensuring inclusive design
+Built for developers seeking focus-friendly reading experiences and the broader neurodivergent community. Inspired by the challenges of parsing dense technical manuals while maintaining privacy-first principles and accessible design.
 
 ## 📞 Support & Feedback
 
-- **Repository**: [https://github.com/Bob5k/DocsFocus](https://github.com/Bob5k/DocsFocus)
-- **Issues**: [GitHub Issues](https://github.com/Bob5k/DocsFocus/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Bob5k/DocsFocus/discussions)
+- **Repository**: <https://github.com/Bob5k/DocsFocus>
+- **Issues**: <https://github.com/Bob5k/DocsFocus/issues>
+- **Discussions**: <https://github.com/Bob5k/DocsFocus/discussions>
 
 ---
 
-**DocsFocus** - Making technical documentation more accessible, one focused paragraph at a time.
+DocsFocus — making technical documentation calmer, one page at a time.
