@@ -506,14 +506,15 @@
 .docsfocus-dyslexia main {
 	font-family:
 		"Atkinson Hyperlegible", "Segoe UI", "Inter", system-ui, sans-serif;
-	letter-spacing: 0.02em;
-	line-height: 1.65;
+	letter-spacing: 0.022em;
+	word-spacing: 0.02em;
+	line-height: 1.72;
 }
 
 .docsfocus-dyslexia p,
 .docsfocus-dyslexia li,
 .docsfocus-dyslexia dd {
-	max-width: 72ch;
+	max-width: 68ch;
 }
 
 .docsfocus-dyslexia .docsfocus-highlight {

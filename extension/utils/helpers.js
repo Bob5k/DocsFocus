@@ -98,7 +98,6 @@ export const SETTINGS_PRESETS = {
 		sectionTracker: true,
 		keyboardShortcuts: true,
 		collapsibleSections: true,
-		dyslexiaMode: false,
 		collapseCodeParagraphs: true,
 		readingMaskConfig: {
 			enabled: false,
@@ -554,11 +553,24 @@ export async function clearDomainSettings(domain) {
 	return current;
 }
 
+function harmonizeSkimDyslexia(rawSettings, baseSettings) {
+	if (
+		rawSettings?.preset === "skim" &&
+		rawSettings.dyslexiaMode === false &&
+		Boolean(baseSettings?.dyslexiaMode)
+	) {
+		rawSettings.dyslexiaMode = true;
+	}
+	return rawSettings;
+}
+
 export function mergeSettings(baseSettings = DEFAULT_SETTINGS, overrides = {}) {
-	return normalizeSettings({
+	const rawSettings = {
 		...baseSettings,
 		...(overrides ?? {}),
-	});
+	};
+	harmonizeSkimDyslexia(rawSettings, baseSettings);
+	return normalizeSettings(rawSettings);
 }
 
 export async function applyPresetSettings(
@@ -568,22 +580,25 @@ export async function applyPresetSettings(
 	// Check built-in presets first
 	const builtInPreset = SETTINGS_PRESETS[presetName];
 	if (builtInPreset) {
-		return normalizeSettings({
+		const rawSettings = {
 			...baseSettings,
 			...builtInPreset,
 			preset: presetName,
-		});
+		};
+		harmonizeSkimDyslexia(rawSettings, baseSettings);
+		return normalizeSettings(rawSettings);
 	}
 
 	// Check custom presets
 	const customPresets = await getCustomPresets();
 	const customPreset = customPresets[presetName];
 	if (customPreset) {
-		return normalizeSettings({
+		const rawSettings = {
 			...baseSettings,
 			...customPreset,
 			preset: presetName,
-		});
+		};
+		return normalizeSettings(rawSettings);
 	}
 
 	// Fallback to base settings
