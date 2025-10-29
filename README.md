@@ -58,7 +58,7 @@ DocsFocus ships with two built-in presets and a flexible custom system so you ca
 
 1. Navigate to a supported documentation site (or enable DocsFocus manually)
 2. Click the DocsFocus toolbar icon
-3. Toggle **Focus Mode** to activate helpers
+3. Toggle **Focus Mode** to activate helpers or press `Alt+Shift+F` (`Option+Shift+F` on macOS) anywhere to switch instantly
 4. Pick a preset or custom profile that matches your current task
 5. Fine-tune settings from the options page when you need deeper control
 

@@ -1,7 +1,9 @@
 import {
 	getDomainFromUrl,
 	getManualOverrides,
+	getFocusMode,
 	MESSAGE_TYPES,
+	setFocusMode,
 	updateManualOverride,
 } from "../utils/helpers.js";
 
@@ -40,6 +42,10 @@ async function initialize() {
 		}
 		maybeInjectForTab(tabId, tab.url);
 	});
+
+	if (chrome.commands?.onCommand?.addListener) {
+		chrome.commands.onCommand.addListener(handleCommand);
+	}
 }
 
 async function handleManualOverrideMessage(message, sender, sendResponse) {
@@ -185,4 +191,38 @@ async function requestHostPermission(domain) {
 
 function buildOriginPatterns(domain) {
 	return [`https://${domain}/*`, `http://${domain}/*`];
+}
+
+async function handleCommand(command) {
+	if (command !== "toggle-focus-mode") {
+		return;
+	}
+
+	try {
+		const current = await getFocusMode();
+		const next = !current;
+		await setFocusMode(next);
+
+		try {
+			const [activeTab] = await chrome.tabs
+				.query({ active: true, currentWindow: true })
+				.catch(() => []);
+			if (activeTab?.id != null) {
+				await sendMessageToTab(activeTab.id, {
+					type: MESSAGE_TYPES.TOGGLE_FOCUS,
+					payload: { enabled: next },
+				}).catch(() => {});
+			}
+		} catch (error) {
+			console.warn(
+				"[DocsFocus] Focus Mode shortcut could not update active tab:",
+				error,
+			);
+		}
+	} catch (error) {
+		console.error(
+			"[DocsFocus] Failed to toggle Focus Mode via shortcut:",
+			error,
+		);
+	}
 }

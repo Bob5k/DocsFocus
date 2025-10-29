@@ -12,6 +12,7 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 	let observer = null;
 	let active = false;
 	let refreshScheduled = false;
+	let refreshFrameId = null;
 	const codeOverlayMap = new Map();
 
 	function activate(settings) {
@@ -85,17 +86,28 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 			return;
 		}
 		refreshScheduled = true;
-		requestAnimationFrame(() => {
+		refreshFrameId = requestAnimationFrame(() => {
+			refreshFrameId = null;
 			refreshScheduled = false;
+			if (!active) {
+				return;
+			}
 			applyHighlights();
 		});
 	}
 
 	function cancelScheduledRefresh() {
 		refreshScheduled = false;
+		if (refreshFrameId !== null) {
+			cancelAnimationFrame(refreshFrameId);
+			refreshFrameId = null;
+		}
 	}
 
 	function applyHighlights() {
+		if (!active) {
+			return;
+		}
 		if (!regex) {
 			clearProseHighlights();
 			clearCodeHighlights();

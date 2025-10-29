@@ -13,6 +13,7 @@
    - Visit https://docs.github.com/en/rest
    - Ensure automatic detection activates features.
    - Toggle Focus Mode OFF → DOM reverts (no previews/highlights).
+   - Use the `Alt+Shift+F` shortcut (`Option+Shift+F` on macOS) to toggle Focus Mode on/off without the popup and confirm highlights disappear immediately when disabled.
    - Toggle back ON → enhancements return without page reload.
 
 3. **npm Package Page**

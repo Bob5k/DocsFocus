@@ -18,6 +18,15 @@
 		"type": "module"
 	},
 	"permissions": ["storage", "scripting", "activeTab", "tabs"],
+	"commands": {
+		"toggle-focus-mode": {
+			"suggested_key": {
+				"default": "Alt+Shift+F",
+				"mac": "Alt+Shift+F"
+			},
+			"description": "Toggle Focus Mode"
+		}
+	},
 	"host_permissions": [
 		"*://developer.mozilla.org/*",
 		"https://docs.github.com/*",
