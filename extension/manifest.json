@@ -2,7 +2,7 @@
 	"manifest_version": 3,
 	"name": "DocsFocus",
 	"description": "DocsFocus helps developers skim documentation faster by collapsing long text, highlighting keywords, and surfacing code examples.",
-	"version": "0.6",
+	"version": "1.0",
 	"default_locale": "en",
 	"action": {
 		"default_title": "DocsFocus",
