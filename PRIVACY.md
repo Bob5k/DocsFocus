@@ -76,14 +76,13 @@ If we make changes to this privacy policy, we will update the "Last Updated" dat
 ## Open Source
 
 DocsFocus is open source. You can review the complete source code at:
-https://github.com/[your-username]/DocsFocus
+https://github.com/bob5k/DocsFocus
 
 ## Contact
 
 If you have questions about this privacy policy or DocsFocus's data practices, please:
 
-- Open an issue on GitHub: https://github.com/[your-username]/DocsFocus/issues
-- Email: [your-email@example.com]
+- Open an issue on GitHub: https://github.com/bob5k/DocsFocus/issues
 
 ## Your Rights
 
