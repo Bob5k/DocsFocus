@@ -246,3 +246,108 @@ body {
 		color: rgba(226, 232, 240, 0.95);
 	}
 }
+
+.popup__feature-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 0;
+	border-top: 1px solid var(--popup-border);
+	border-bottom: 1px solid var(--popup-border);
+	margin: 12px 0;
+}
+
+.popup__feature-label {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 13px;
+	font-weight: 500;
+	color: var(--popup-text);
+}
+
+.popup__feature-text {
+	cursor: default;
+}
+
+.popup__feature-info {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 16px;
+	height: 16px;
+	font-size: 11px;
+	font-weight: 600;
+	font-style: italic;
+	color: var(--popup-muted);
+	background: rgba(99, 102, 241, 0.12);
+	border: 1px solid var(--popup-border);
+	border-radius: 50%;
+	cursor: help;
+	opacity: 0.75;
+	transition: all 120ms ease;
+}
+
+.popup__feature-info:hover {
+	opacity: 1;
+	background: rgba(99, 102, 241, 0.2);
+	transform: scale(1.1);
+}
+
+@media (prefers-color-scheme: dark) {
+	.popup__feature-info {
+		background: rgba(96, 165, 250, 0.15);
+		border-color: rgba(148, 163, 184, 0.3);
+	}
+
+	.popup__feature-info:hover {
+		background: rgba(96, 165, 250, 0.25);
+	}
+}
+
+.popup__mini-toggle {
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+}
+
+.popup__mini-toggle-input {
+	position: absolute;
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+.popup__mini-toggle-slider {
+	position: relative;
+	width: 36px;
+	height: 20px;
+	border-radius: 999px;
+	background: var(--toggle-off);
+	transition: background 160ms ease;
+}
+
+.popup__mini-toggle-slider::after {
+	content: "";
+	position: absolute;
+	top: 2px;
+	left: 2px;
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	background: var(--toggle-handle);
+	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+	transition: transform 160ms ease;
+}
+
+.popup__mini-toggle:focus-within .popup__mini-toggle-slider {
+	box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35);
+}
+
+.popup__mini-toggle-input:checked + .popup__mini-toggle-slider {
+	background: var(--toggle-on);
+}
+
+.popup__mini-toggle-input:checked + .popup__mini-toggle-slider::after {
+	transform: translateX(16px);
+}

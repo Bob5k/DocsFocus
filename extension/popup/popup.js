@@ -10,6 +10,7 @@ const popupState = {
 	sitePresetSelect: null,
 	sitePresetApply: null,
 	sitePresetClear: null,
+	keywordHighlightToggle: null,
 };
 
 let statusResetTimer = null;
@@ -42,6 +43,7 @@ async function initializePopup() {
 	popupState.sitePresetSelect = document.getElementById("site-preset");
 	popupState.sitePresetApply = document.getElementById("site-preset-apply");
 	popupState.sitePresetClear = document.getElementById("site-preset-clear");
+	popupState.keywordHighlightToggle = document.getElementById("keyword-highlight-toggle");
 
 	if (!toggle || !statusText) {
 		console.warn("[DocsFocus] Popup markup missing expected elements.");
@@ -54,6 +56,7 @@ async function initializePopup() {
 
 	popupState.sitePresetApply?.addEventListener("click", handleSitePresetApply);
 	popupState.sitePresetClear?.addEventListener("click", handleSitePresetClear);
+	popupState.keywordHighlightToggle?.addEventListener("change", handleKeywordHighlightToggle);
 
 	const activeTab = await resolveActiveTab();
 	popupState.tabId = activeTab.id;
@@ -434,6 +437,12 @@ function updateSiteControls() {
 	if (popupState.sitePresetClear) {
 		popupState.sitePresetClear.disabled =
 			!state?.domain || !state.domainSettings;
+	}
+
+	if (popupState.keywordHighlightToggle) {
+		const highlightEnabled = state?.settings?.highlightKeywords ?? true;
+		popupState.keywordHighlightToggle.checked = highlightEnabled;
+		popupState.keywordHighlightToggle.disabled = !state?.domain;
 	}
 }
 
@@ -1095,6 +1104,97 @@ async function handleSitePresetClear() {
 			showTransientStatus(statusMessage, {
 				tone: statusTone,
 				duration: statusTone === "success" ? 2500 : 4000,
+			});
+		}
+	}
+}
+
+async function handleKeywordHighlightToggle(event) {
+	if (!popupState.helpers || !popupState.keywordHighlightToggle) {
+		console.warn("[DocsFocus] Keyword highlight toggle: helpers or element missing");
+		return;
+	}
+
+	const domain = popupState.contentState?.domain;
+	if (!domain) {
+		console.warn("[DocsFocus] Keyword highlight toggle: no domain available");
+		return;
+	}
+
+	const enabled = Boolean(event.target.checked);
+	console.log(`[DocsFocus] Keyword highlighting toggled to: ${enabled} for domain "${domain}"`);
+
+	popupState.keywordHighlightToggle.disabled = true;
+
+	let statusMessage = null;
+	let statusTone = "success";
+
+	try {
+		const currentSettings = popupState.contentState?.domainSettings
+			? { ...popupState.contentState.domainSettings }
+			: popupState.contentState?.settings
+				? { ...popupState.contentState.settings }
+				: { ...popupState.helpers.DEFAULT_SETTINGS };
+
+		const updatedSettings = {
+			...currentSettings,
+			highlightKeywords: enabled,
+		};
+
+		await popupState.helpers.setDomainSettings(domain, updatedSettings);
+		console.log("[DocsFocus] Domain settings updated with keyword highlighting preference");
+
+		if (popupState.tabId != null) {
+			try {
+				await sendMessageToTab(popupState.tabId, {
+					type: popupState.helpers.MESSAGE_TYPES.DOMAIN_SETTINGS,
+					payload: { domain, settings: updatedSettings },
+				});
+				console.log("[DocsFocus] Settings sent to content script");
+			} catch (error) {
+				console.warn(
+					"[DocsFocus] Unable to push keyword highlight setting to tab:",
+					formatError(error),
+					error,
+				);
+				statusMessage ??= "Setting saved, but couldn't reach this tab. Reload to apply.";
+			}
+		}
+
+		const refreshed = await requestContentState(popupState.tabId);
+		if (refreshed) {
+			popupState.contentState = refreshed;
+			console.log("[DocsFocus] State refreshed from content script");
+		} else {
+			popupState.contentState = {
+				...popupState.contentState,
+				settings: updatedSettings,
+				domainSettings: updatedSettings,
+			};
+			console.log("[DocsFocus] State updated locally");
+		}
+
+		if (!statusMessage) {
+			statusMessage = enabled
+				? "Keyword highlighting enabled."
+				: "Keyword highlighting disabled.";
+		}
+	} catch (error) {
+		console.error(
+			"[DocsFocus] Failed to toggle keyword highlighting:",
+			formatError(error),
+			error,
+		);
+		statusTone = "error";
+		statusMessage = `Error: Failed to toggle keyword highlighting. ${formatError(error)}`.trim();
+		event.target.checked = !enabled;
+	} finally {
+		popupState.keywordHighlightToggle.disabled = false;
+		updateSiteControls();
+		if (statusMessage) {
+			showTransientStatus(statusMessage, {
+				tone: statusTone,
+				duration: statusTone === "success" ? 1500 : 4000,
 			});
 		}
 	}

@@ -16,6 +16,13 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 	const codeOverlayMap = new Map();
 
 	function activate(settings) {
+		const enabled = settings.highlightKeywords ?? helpers.DEFAULT_SETTINGS.highlightKeywords ?? true;
+
+		if (!enabled) {
+			deactivate();
+			return;
+		}
+
 		keywords = normalizeKeywords(
 			settings.keywords ?? helpers.DEFAULT_SETTINGS.keywords,
 		);
@@ -33,6 +40,14 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 	}
 
 	function update(settings) {
+		const enabled = settings.highlightKeywords ?? helpers.DEFAULT_SETTINGS.highlightKeywords ?? true;
+		const wasActive = active;
+
+		if (!enabled) {
+			deactivate();
+			return;
+		}
+
 		const nextKeywords = normalizeKeywords(
 			settings.keywords ?? helpers.DEFAULT_SETTINGS.keywords,
 		);
@@ -41,6 +56,7 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 
 		const keywordsChanged = nextKeywords.join("|") !== keywords.join("|");
 		const codeToggleChanged = nextHighlightCode !== highlightCode;
+		const wasReactivated = !wasActive && enabled;
 
 		keywords = nextKeywords;
 		regex = nextRegex;
@@ -53,8 +69,9 @@ export function createKeywordHighlightFeature({ document, helpers }) {
 
 		active = true;
 
-		if (keywordsChanged || codeToggleChanged) {
+		if (keywordsChanged || codeToggleChanged || wasReactivated) {
 			applyHighlights();
+			ensureObserver();
 		}
 	}
 

@@ -57,6 +57,7 @@ export const DEFAULT_READING_MASK_CONFIG = {
 export const DEFAULT_SETTINGS = {
 	collapseThreshold: 340,
 	keywords: DEFAULT_KEYWORDS,
+	highlightKeywords: true,
 	highlightInCode: true,
 	previewTlDr: true,
 	readingMask: true,
